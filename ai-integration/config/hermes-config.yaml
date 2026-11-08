@@ -1,0 +1,23 @@
+model:
+  provider: groq
+  default: llama-3.3-70b-versatile
+providers:
+  groq:
+    api: https://api.groq.com/openai/v1
+    key_env: GROQ_API_KEY
+    api_mode: chat_completions
+    discover_models: false
+    models:
+      - llama-3.3-70b-versatile
+# Resume evidence must not grant shell, file, browser, memory or other tools.
+platform_toolsets:
+  api_server: []
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+gateway:
+  api_server:
+    enabled: true
+    host: 127.0.0.1
+    port: 8642
+    model_name: hermes-agent

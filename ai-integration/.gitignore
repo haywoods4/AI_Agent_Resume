@@ -1,0 +1,15 @@
+.venv/
+.env
+.env.*
+!.env.example
+data/
+vendor/
+tools/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.sqlite*
+*.log
+react-client/node_modules/
+react-client/dist/
+test-results/

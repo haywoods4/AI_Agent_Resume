@@ -1,0 +1,10 @@
+{
+  "backend-engineer": {
+    "title": "Backend engineer — class fixture",
+    "required_skills": ["python", "fastapi", "sql", "git"]
+  },
+  "frontend-engineer": {
+    "title": "Frontend engineer — class fixture",
+    "required_skills": ["javascript", "react", "git"]
+  }
+}

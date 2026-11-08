@@ -1,0 +1,36 @@
+name: AI integration
+on:
+  push:
+    paths: ['ai-integration/**', '.github/workflows/ai-integration.yml']
+  pull_request:
+    paths: ['ai-integration/**', '.github/workflows/ai-integration.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    defaults:
+      run:
+        working-directory: ai-integration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pip install uv==0.13.5
+      - run: uv sync --frozen
+      - run: uv run python scripts/setup_opa.py
+      - run: uv run ruff check .
+      - run: tools/opa test policies/ -v
+      - run: uv run pytest -q
+        env:
+          TEST_REDIS_URL: redis://127.0.0.1:6379/0
+      - run: npm ci && npm run build
+        working-directory: ai-integration/react-client
