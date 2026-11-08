@@ -11,7 +11,7 @@ class Settings:
     hermes_key: str = ""
     hermes_model: str = "hermes-agent"
     model_version: str = "groq/llama-3.3-70b-versatile"
-    hermes_timeout: float = 15
+    hermes_timeout: float = 9
     opa_url: str = "http://127.0.0.1:8181/v1/data/resume/screening/result"
     opa_timeout: float = 1
     reviewer_token: str = ""
@@ -29,7 +29,7 @@ class Settings:
             hermes_key=os.getenv("HERMES_API_KEY", ""),
             hermes_model=os.getenv("HERMES_MODEL", "hermes-agent"),
             model_version=os.getenv("INFERENCE_MODEL_VERSION", cls.model_version),
-            hermes_timeout=float(os.getenv("HERMES_TIMEOUT_SECONDS", "15")),
+            hermes_timeout=float(os.getenv("HERMES_TIMEOUT_SECONDS", "9")),
             opa_url=os.getenv("OPA_URL", cls.opa_url),
             opa_timeout=float(os.getenv("OPA_TIMEOUT_SECONDS", "1")),
             reviewer_token=os.getenv("REVIEWER_TOKEN", ""),
@@ -48,7 +48,7 @@ class Settings:
             raise ValueError("Reviewer and HMAC secrets must differ")
         if self.mode == "hermes" and not self.hermes_key:
             raise ValueError("Set HERMES_API_KEY for the local Hermes API")
-        if not (0 < self.hermes_timeout <= 120 and 0 < self.opa_timeout <= 10):
+        if not (0 < self.hermes_timeout < 10 and 0 < self.opa_timeout <= 10):
             raise ValueError("Invalid dependency timeout")
         for value in (self.hermes_url, self.opa_url):
             url = urlparse(value)

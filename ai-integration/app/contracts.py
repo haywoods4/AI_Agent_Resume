@@ -54,11 +54,21 @@ class Review(Contract):
     reason: Literal["VERIFIED_AGAINST_RESUME", "INSUFFICIENT_EVIDENCE", "PARSER_LIMITATION"]
 
 
+class AIMetrics(Contract):
+    latency_ms: int = 0
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    cost_usd: float | None = None
+    cost_basis: str = "unavailable"
+
+
 class Evaluation(Contract):
     evaluation_id: str
     candidate_id: str
     job_id: str
     status: Literal["READY_FOR_REVIEW", "MANUAL_REVIEW_REQUIRED", "REVIEWED"]
+    policy_status: Literal["allowed", "blocked", "needs_review"] = "needs_review"
+    ai_metrics: AIMetrics = Field(default_factory=AIMetrics)
     facts: ScreeningFacts
     assessment: AgentAssessment | None
     policy: PolicyResult | None

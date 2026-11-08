@@ -227,7 +227,7 @@ function App() {
                   </tbody>
                 </table>
                 <p>
-                  OPA:{" "}
+                  Policy status: <strong>{result.policy_status}</strong> · OPA:{" "}
                   <strong>
                     {result.policy?.status.replaceAll("_", " ") ??
                       "No policy result"}
@@ -239,7 +239,11 @@ function App() {
                   resume; this result never accepts or rejects a candidate.
                 </p>
                 <p className="hint">
-                  Model: {result.model_version} · Privacy:{" "}
+                  AI latency: {result.ai_metrics.latency_ms} ms · Cost:{" "}
+                  {result.ai_metrics.cost_usd === null
+                    ? "unavailable (provider billing not supplied)"
+                    : `$${result.ai_metrics.cost_usd}`}{" "}
+                  · Model: {result.model_version} · Privacy:{" "}
                   {result.privacy_version}
                 </p>
                 {result.review ? (

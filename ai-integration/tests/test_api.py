@@ -116,3 +116,73 @@ def test_policy_failure_does_not_approve_candidate(settings):
         assert result["status"] == "MANUAL_REVIEW_REQUIRED"
         assert result["failure_code"] == "POLICY_UNAVAILABLE"
         assert result["requires_human_review"] is True
+
+
+def test_policy_statuses_and_four_field_audit(settings):
+    import json
+
+    app = create_app(settings, policy=FixturePolicy())
+    with TestClient(app, headers={"Authorization": f"Bearer {settings.reviewer_token}"}) as client:
+        allowed = upload(client, "allowed").json()
+        blocked = upload(client, "blocked", b"Python").json()
+        assert allowed["policy_status"] == "allowed"
+        assert blocked["policy_status"] == "blocked"
+        assert blocked["requires_human_review"] is True
+        rows = app.state.store.db.execute("SELECT * FROM decision_audit ORDER BY id").fetchall()
+        assert [r["phase"] for r in rows] == ["ai_request", "completed"] * 2
+        for row in rows:
+            assert json.loads(row["job_requirements"]) == allowed["facts"]["required_skills"]
+            assert json.loads(row["approved_inputs"])["job_id"] == "backend-engineer"
+            assert row["model_version"] == "demo-fixture-v1"
+            assert json.loads(row["policy_result"])["status"] in {
+                "allowed",
+                "blocked",
+                "needs_review",
+            }
+            assert "private.test" not in row["approved_inputs"]
+        assert allowed["ai_metrics"]["cost_usd"] == 0.0
+        assert allowed["ai_metrics"]["latency_ms"] < 10000
+        count = len(rows)
+        upload(client, "allowed")
+        assert (
+            app.state.store.db.execute("SELECT count(*) FROM decision_audit").fetchone()[0] == count
+        )
+
+
+def test_ai_deadline_pauses_for_review_and_audits(settings):
+    import asyncio
+    from dataclasses import replace
+
+    class SlowAgent:
+        async def assess(self, facts, request_id):
+            await asyncio.sleep(1)
+
+        async def close(self):
+            pass
+
+    app = create_app(
+        replace(settings, hermes_timeout=0.01), agent=SlowAgent(), policy=FixturePolicy()
+    )
+    with TestClient(app, headers={"Authorization": f"Bearer {settings.reviewer_token}"}) as client:
+        result = upload(client).json()
+        assert result["policy_status"] == "needs_review"
+        assert result["failure_code"] == "AI_TIMEOUT"
+        assert result["policy"] is None
+        assert result["ai_metrics"]["cost_usd"] is None
+        assert app.state.store.db.execute("SELECT count(*) FROM decision_audit").fetchone()[0] == 2
+
+
+def test_equivalent_profiles_produce_same_recommendation(settings):
+    with TestClient(
+        create_app(settings, policy=FixturePolicy()),
+        headers={"Authorization": f"Bearer {settings.reviewer_token}"},
+    ) as client:
+        first = upload(
+            client, "one", b"Alpha Person alpha@example.invalid Python FastAPI SQL Git"
+        ).json()
+        second = upload(
+            client, "two", b"Beta Person beta@example.invalid Git SQL FastAPI Python"
+        ).json()
+        assert first["assessment"] == second["assessment"]
+        assert first["policy"] == second["policy"]
+        assert first["policy_status"] == second["policy_status"]

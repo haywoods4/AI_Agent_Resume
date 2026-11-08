@@ -40,6 +40,12 @@ class Store:
             evaluation_id TEXT PRIMARY KEY REFERENCES evaluations(id), reviewer TEXT NOT NULL,
             outcome TEXT NOT NULL, reason TEXT NOT NULL, created REAL NOT NULL
           );
+          CREATE TABLE IF NOT EXISTS decision_audit (
+            id INTEGER PRIMARY KEY, tenant TEXT NOT NULL, evaluation_id TEXT NOT NULL,
+            phase TEXT NOT NULL, job_requirements TEXT NOT NULL, approved_inputs TEXT NOT NULL,
+            model_version TEXT NOT NULL, policy_result TEXT NOT NULL, ai_metrics TEXT NOT NULL,
+            created REAL NOT NULL
+          );
           CREATE TABLE IF NOT EXISTS audit (
             id INTEGER PRIMARY KEY, tenant TEXT NOT NULL, request_id TEXT NOT NULL,
             action TEXT NOT NULL, status TEXT NOT NULL, source TEXT NOT NULL,
@@ -118,7 +124,7 @@ class Store:
         )
         self.db.execute("DELETE FROM requests WHERE expires<?", (time.time(),))
 
-    def save_evaluation(self, tenant, evaluation: Evaluation, request_id, fingerprint):
+    def save_evaluation(self, tenant, evaluation: Evaluation, request_id, fingerprint, phase=None):
         with self.transaction():
             self.db.execute(
                 "INSERT INTO evaluations VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE "
@@ -131,6 +137,8 @@ class Store:
                     time.time(),
                 ),
             )
+            if phase:
+                self.decision_audit(tenant, evaluation, phase)
             self.remember(
                 tenant,
                 "evaluation",
@@ -179,6 +187,31 @@ class Store:
             "INSERT INTO audit(tenant,request_id,action,status,source,latency_ms,created) "
             "VALUES (?,?,?,?,?,?,?)",
             (tenant, request_id, action, status, source, latency_ms, time.time()),
+        )
+
+    def decision_audit(self, tenant, evaluation, phase):
+        """Append-only snapshots include all four fields required by the sprint backlog."""
+        self.db.execute(
+            "INSERT INTO decision_audit(tenant,evaluation_id,phase,job_requirements,"
+            "approved_inputs,model_version,policy_result,ai_metrics,created) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (
+                tenant,
+                evaluation.evaluation_id,
+                phase,
+                json.dumps(evaluation.facts.required_skills),
+                evaluation.facts.model_dump_json(),
+                evaluation.model_version,
+                json.dumps(
+                    {
+                        "status": evaluation.policy_status,
+                        "decision": evaluation.policy.model_dump() if evaluation.policy else None,
+                        "failure_code": evaluation.failure_code,
+                    }
+                ),
+                evaluation.ai_metrics.model_dump_json(),
+                time.time(),
+            ),
         )
 
     def close(self):

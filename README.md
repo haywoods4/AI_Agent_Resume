@@ -1,5 +1,5 @@
 # ai-resume-evaluator
 
-AI-assisted candidate résumé screening with React, FastAPI, Groq via Hermes Agent, **SQLite**, strict PII filtering and OPA rules. Results require human review.
+I am building my integration-lead contribution for an AI résumé-screening platform with React, FastAPI, Groq through Hermes Agent, SQLite, PII filtering and OPA rules. I require human review of the results.
 
-The runnable integration-lead contribution is in [ai-integration](ai-integration/README.md), including local demo instructions, live Hermes/Groq setup, API contracts, privacy boundaries and tests. The reference React client can be replaced by the team's frontend against the same API.
+I keep my runnable implementation, setup instructions, API contracts and tests in [ai-integration](ai-integration/README.md). I provide a reference React client that my team can replace against the same API.

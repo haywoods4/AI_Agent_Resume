@@ -4,7 +4,7 @@ import time
 
 import httpx
 
-from app.contracts import AgentAssessment, PolicyResult, ScreeningFacts, SkillAssessment
+from app.contracts import AgentAssessment, AIMetrics, PolicyResult, ScreeningFacts, SkillAssessment
 from app.settings import Settings
 
 
@@ -41,6 +41,7 @@ class HermesClient:
         self.failures = 0
         self.open_until = 0.0
         self.probing = False
+        self.usage: dict[str, AIMetrics] = {}
 
     async def assess(self, facts: ScreeningFacts, request_id: str) -> AgentAssessment:
         if time.monotonic() < self.open_until or self.probing:
@@ -111,7 +112,13 @@ class HermesClient:
                 content.extend(chunk)
                 if len(content) > 65536:
                     raise DependencyError("INVALID_AGENT_OUTPUT")
-        choice = json.loads(content)["choices"][0]
+        envelope = json.loads(content)
+        usage = envelope.get("usage") or {}
+        self.usage[request_id] = AIMetrics(
+            prompt_tokens=usage.get("prompt_tokens"),
+            completion_tokens=usage.get("completion_tokens"),
+        )
+        choice = envelope["choices"][0]
         if choice.get("finish_reason") != "stop" or choice["message"].get("tool_calls"):
             raise DependencyError("INVALID_AGENT_OUTPUT")
         return json.loads(choice["message"]["content"])
@@ -121,7 +128,11 @@ class HermesClient:
 
 
 class DemoAgent:
+    def __init__(self):
+        self.usage: dict[str, AIMetrics] = {}
+
     async def assess(self, facts: ScreeningFacts, request_id: str) -> AgentAssessment:
+        self.usage[request_id] = AIMetrics(cost_usd=0.0, cost_basis="local_fixture")
         observed = {item.skill_id: item.pages for item in facts.observed_skills}
         return AgentAssessment(
             skills=[

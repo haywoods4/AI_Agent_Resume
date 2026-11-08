@@ -6,7 +6,7 @@ import time
 import uuid
 from pathlib import Path
 
-from app.contracts import Evaluation
+from app.contracts import AIMetrics, Evaluation, ScreeningFacts, SkillEvidence
 from app.parser import parse_document
 from app.privacy import PIIScrubbingMiddleware, identifier_hash, normalize_identifier
 from app.providers import DependencyError
@@ -76,17 +76,45 @@ class ScreeningPipeline:
                 else "demo-fixture-v1",
             )
             # Persist before remote work: a crash cannot silently erase an admitted evaluation.
-            self.store.save_evaluation(tenant, evaluation, request_id, fingerprint)
+            self.store.save_evaluation(tenant, evaluation, request_id, fingerprint, "ai_request")
             evaluation_id = evaluation.evaluation_id
             self.active_evaluations.add(evaluation_id)
+            ai_started = time.monotonic()
             try:
-                evaluation.assessment = await self.agent.assess(facts, evaluation.evaluation_id)
-                evaluation.policy = await self.policy.evaluate(facts)
+                try:
+                    async with asyncio.timeout(self.settings.hermes_timeout):
+                        evaluation.assessment = await self.agent.assess(
+                            facts, evaluation.evaluation_id
+                        )
+                finally:
+                    evaluation.ai_metrics = getattr(self.agent, "usage", {}).pop(
+                        evaluation.evaluation_id, AIMetrics()
+                    )
+                    evaluation.ai_metrics.latency_ms = int((time.monotonic() - ai_started) * 1000)
+                # OPA receives the validated AI findings, not an independent bypass of the AI.
+                policy_facts = ScreeningFacts(
+                    job_id=facts.job_id,
+                    required_skills=facts.required_skills,
+                    page_count=facts.page_count,
+                    observed_skills=[
+                        SkillEvidence(skill_id=item.skill_id, pages=item.evidence_pages)
+                        for item in evaluation.assessment.skills
+                        if item.status == "MENTIONED"
+                    ],
+                )
+                evaluation.policy = await self.policy.evaluate(policy_facts)
+                evaluation.policy_status = (
+                    "allowed"
+                    if evaluation.policy.status == "REQUIREMENTS_DOCUMENTED"
+                    else "blocked"
+                )
                 evaluation.status = "READY_FOR_REVIEW"
                 evaluation.failure_code = None
+            except TimeoutError:
+                evaluation.failure_code = "AI_TIMEOUT"
             except DependencyError as error:
                 evaluation.failure_code = error.code
-            self.store.save_evaluation(tenant, evaluation, request_id, fingerprint)
+            self.store.save_evaluation(tenant, evaluation, request_id, fingerprint, "completed")
             self.store.audit(
                 tenant,
                 request_id,

@@ -3,6 +3,12 @@ export interface Evaluation {
   candidate_id: string;
   job_id: string;
   status: "READY_FOR_REVIEW" | "MANUAL_REVIEW_REQUIRED" | "REVIEWED";
+  policy_status: "allowed" | "blocked" | "needs_review";
+  ai_metrics: {
+    latency_ms: number;
+    cost_usd: number | null;
+    cost_basis: string;
+  };
   facts: {
     required_skills: string[];
     observed_skills: { skill_id: string; pages: number[] }[];

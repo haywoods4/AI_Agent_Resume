@@ -1,0 +1,4 @@
+Synthetic Candidate A
+fixture-a@example.invalid
+Skills: Python, FastAPI, SQL, Git.
+Built an API as a class project. This is synthetic test data, not an actual applicant.
