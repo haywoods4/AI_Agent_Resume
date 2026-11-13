@@ -13,14 +13,13 @@ Base = declarative_base()
 
 # Replaced the PII (names/resumes) with anonymous tracking IDs to enforce the privacy boundary.
 class EvaluationRecord(Base):
-    __tablename__ = "evaluations"
+    __tablename__ = "audit_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
-    request_id = Column(String, index=True)
-    job_id = Column(String)
-    status = Column(String, default="needs_review")
-    policy_status = Column(String, default="needs_review")
-    model_version = Column(String)
+    evaluation_id = Column(String, primary_key=True, index=True)
+    job_id = Column(String, index=True)
+    verdict = Column(String)
+    sanitized_payload = Column(String)
+    policy_evaluations = Column(String)
 
 Base.metadata.create_all(bind=engine)
 
