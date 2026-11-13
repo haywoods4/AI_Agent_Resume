@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, Form, File, UploadFile, HTTPException, Hea
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Annotated
+import uuid
 
 from database import get_db, EvaluationRecord
 
@@ -23,20 +24,19 @@ async def verify_reviewer(authorization: Annotated[str | None, Header()] = None)
     return authorization
 
 # FIX: Renamed endpoint from /evaluate_resume to match frontend contract
-@app.post("/api/v1/evaluations")
+@app.post("/api/v1/resumes/upload")
 async def evaluate_resume(
-    request_id: Annotated[str, Form(min_length=1, max_length=128)],
     job_id: Annotated[str, Form(min_length=1, max_length=64)],
-    candidate_email: Annotated[str, Form(min_length=1, max_length=254)],
-    resume: Annotated[UploadFile, File()],
+    candidate_id: Annotated[str, Form(min_length=1, max_length=128)],
+    file: Annotated[UploadFile, File()],
     db: Session = Depends(get_db),
     token: str = Depends(verify_reviewer)
 ):
     # FIX: Bound request body size (Max 512 KiB)
-    content = await resume.read(512 * 1024 + 1)
+    content = await file.read(512 * 1024 + 1)
     if len(content) > 512 * 1024:
         raise HTTPException(status_code=413, detail="Resume must not exceed 512 KiB")
-    await resume.close()
+    await file.close()
 
     # Simulate AI evaluation (replace with actual AI model integration)
     # FIX: Kept unmistakably separate from a real evaluation by marking as simulation
@@ -45,22 +45,31 @@ async def evaluate_resume(
     # Store the evaluation record in the database
     # FIX: Privacy boundary - no raw name or resume_text is saved or echoed
     evaluation_record = EvaluationRecord(
-        request_id=request_id,
+        evaluation_id=str(uuid.uuid4()),
         job_id=job_id,
-        status="needs_review",
-        policy_status="needs_review",
-        model_version="simulation-v1"
+        verdict="needs_review",
+        sanitized_payload=f"candidate_id: {candidate_id}, feedback: {ai_feedback}",
+        policy_evaluations="needs_review"
     )
     
-    db.add(evaluation_record)
-    db.commit()
-    db.refresh(evaluation_record)
+    # FIX: Rollback on a failed write per peer review request
+    try:
+        db.add(evaluation_record)
+        db.commit()
+        db.refresh(evaluation_record)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database write failed")
     
     return {
-        "evaluation_id": evaluation_record.id,
-        "request_id": evaluation_record.request_id,
+        "evaluation_id": evaluation_record.evaluation_id,
         "job_id": evaluation_record.job_id,
-        "status": evaluation_record.status,
-        "policy_status": evaluation_record.policy_status,
+        "verdict": evaluation_record.verdict,
+        "policy_evaluations": evaluation_record.policy_evaluations,
         "ai_feedback": ai_feedback
     }
+
+# Interface Contract: Audit Logs Endpoint Stub
+@app.get("/api/v1/audit-logs")
+async def get_audit_logs(token: str = Depends(verify_reviewer)):
+    return {"message": "Audit logs endpoint stub"}
