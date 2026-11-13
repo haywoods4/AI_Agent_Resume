@@ -2,14 +2,20 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from unittest.mock import patch
 
-from main import app, get_db
-from database import Base
+from main import app
+from database import Base, get_db
 
 # Set up an isolated, in-memory SQLite database for testing
+# StaticPool ensures the in-memory tables persist across test threads
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base.metadata.create_all(bind=engine)
@@ -31,13 +37,13 @@ client = TestClient(app)
 # 1. Startup Test
 def test_app_startup():
     """Verifies the application initializes and the client can connect."""
-    response = client.get("/docs") # Testing FastAPI's auto-generated docs endpoint
+    response = client.get("/docs")  # Testing FastAPI's auto-generated docs endpoint
     assert response.status_code == 200
 
 # 2. Authentication Test
 def test_authentication_failure():
     """Verifies the endpoint rejects requests without a valid Bearer token."""
-    response = client.post("/api/v1/evaluations", headers={})
+    response = client.post("/api/v1/resumes/upload", headers={})
     assert response.status_code == 401
     assert response.json()["detail"] == "UNAUTHORIZED"
 
@@ -45,15 +51,14 @@ def test_authentication_failure():
 def test_valid_request_and_privacy_check():
     """Verifies a valid upload and ensures no raw PII is echoed in the response."""
     file_content = b"Simulated resume content"
-    files = {"resume": ("resume.pdf", file_content, "application/pdf")}
+    files = {"file": ("resume.pdf", file_content, "application/pdf")}
     data = {
-        "request_id": "req_789",
         "job_id": "job_101",
-        "candidate_email": "candidate@example.com"
+        "candidate_id": "cand_789"
     }
     headers = {"Authorization": "Bearer test-token"}
     
-    response = client.post("/api/v1/evaluations", data=data, files=files, headers=headers)
+    response = client.post("/api/v1/resumes/upload", data=data, files=files, headers=headers)
     
     assert response.status_code == 200
     response_data = response.json()
@@ -64,40 +69,50 @@ def test_valid_request_and_privacy_check():
     assert "candidate_email" not in response_data
     
     # Verify contract response fields
-    assert response_data["status"] == "needs_review"
-    assert response_data["request_id"] == "req_789"
+    assert "evaluation_id" in response_data
+    assert response_data["job_id"] == "job_101"
+    assert response_data["verdict"] == "needs_review"
+    assert response_data["policy_evaluations"] == "needs_review"
 
 # 4. Invalid Request Test (File size boundary)
 def test_invalid_request_file_too_large():
     """Verifies the 512 KiB file size limit rejects oversized files."""
-    large_content = b"0" * (512 * 1024 + 10) # Slightly over 512KB
-    files = {"resume": ("large.pdf", large_content, "application/pdf")}
+    large_content = b"0" * (512 * 1024 + 10)  # Slightly over 512KB
+    files = {"file": ("large.pdf", large_content, "application/pdf")}
     data = {
-        "request_id": "req_999",
         "job_id": "job_101",
-        "candidate_email": "large@example.com"
+        "candidate_id": "cand_999"
     }
     headers = {"Authorization": "Bearer test-token"}
     
-    response = client.post("/api/v1/evaluations", data=data, files=files, headers=headers)
+    response = client.post("/api/v1/resumes/upload", data=data, files=files, headers=headers)
     assert response.status_code == 413
     assert response.json()["detail"] == "Resume must not exceed 512 KiB"
 
 # 5. Failed Database Write Test
 def test_failed_database_write_rollback():
-    """Verifies that a database commit failure triggers a rollback."""
+    """Verifies that a database commit failure triggers a rollback and returns 500."""
     file_content = b"Simulated resume content"
-    files = {"resume": ("resume.pdf", file_content, "application/pdf")}
+    files = {"file": ("resume.pdf", file_content, "application/pdf")}
     data = {
-        "request_id": "req_fail",
         "job_id": "job_fail",
-        "candidate_email": "fail@example.com"
+        "candidate_id": "cand_fail"
     }
     headers = {"Authorization": "Bearer test-token"}
     
-    # Mock the session commit to forcefully throw an exception
-    with patch("sqlalchemy.orm.Session.commit", side_effect=Exception("Simulated DB Write Failure")):
-        with pytest.raises(Exception) as exc_info:
-            client.post("/api/v1/evaluations", data=data, files=files, headers=headers)
+    # Mock the session commit to forcefully throw an exception and spy on rollback
+    with patch("sqlalchemy.orm.Session.commit", side_effect=Exception("Simulated DB Write Failure")), \
+         patch("sqlalchemy.orm.Session.rollback") as mock_rollback:
+        response = client.post("/api/v1/resumes/upload", data=data, files=files, headers=headers)
         
-        assert "Simulated DB Write Failure" in str(exc_info.value)
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Database write failed"
+        mock_rollback.assert_called_once()
+
+# 6. Audit Logs Endpoint Stub Test
+def test_audit_logs_stub():
+    """Verifies the GET /api/v1/audit-logs contract stub works with auth."""
+    headers = {"Authorization": "Bearer test-token"}
+    response = client.get("/api/v1/audit-logs", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {"message": "Audit logs endpoint stub"}
