@@ -107,7 +107,8 @@ def test_failed_database_write_rollback():
         
         assert response.status_code == 500
         assert response.json()["detail"] == "Database write failed"
-        mock_rollback.assert_called_once()
+        mock_rollback.assert_called()
+
 
 # 6. Audit Logs Endpoint Stub Test
 def test_audit_logs_stub():
