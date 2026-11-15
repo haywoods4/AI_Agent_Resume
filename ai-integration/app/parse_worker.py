@@ -10,7 +10,10 @@ def main():
         import resource
 
         resource.setrlimit(resource.RLIMIT_CPU, (4, 4))
-        resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
+        # macOS does not support this address-space limit reliably.
+        # Linux retains the hard memory cap; all platforms retain input/time bounds.
+        if sys.platform.startswith("linux"):
+            resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
     except ImportError:
         pass  # Windows still has the parent-enforced wall-clock timeout and input size limit.
     logging.disable(logging.CRITICAL)

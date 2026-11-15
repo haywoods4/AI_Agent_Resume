@@ -36,7 +36,8 @@ class HermesClient:
     def __init__(self, settings: Settings, transport=None):
         self.settings = settings
         self.client = httpx.AsyncClient(
-            timeout=settings.hermes_timeout, follow_redirects=False, transport=transport
+            timeout=settings.hermes_timeout, follow_redirects=False, transport=transport,
+            trust_env=False
         )
         self.failures = 0
         self.open_until = 0.0
@@ -153,7 +154,9 @@ class DemoAgent:
 class OPAClient:
     def __init__(self, settings: Settings, transport=None):
         self.settings = settings
-        self.client = httpx.AsyncClient(timeout=settings.opa_timeout, transport=transport)
+        self.client = httpx.AsyncClient(
+            timeout=settings.opa_timeout, transport=transport, trust_env=False
+        )
 
     async def evaluate(self, facts: ScreeningFacts) -> PolicyResult:
         try:

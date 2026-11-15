@@ -14,7 +14,8 @@ machine = {"x86_64": "amd64", "AMD64": "amd64", "arm64": "arm64", "aarch64": "ar
 if not system or not machine or (system == "windows" and machine != "amd64"):
     raise SystemExit("Install OPA 1.x manually for this platform")
 suffix = (
-    "_static" if system == "linux" and machine == "amd64" else ".exe" if system == "windows" else ""
+    "_static" if system == "linux" or (system == "darwin" and machine == "arm64")
+    else ".exe" if system == "windows" else ""
 )
 asset = f"opa_{system}_{machine}{suffix}"
 base = f"https://github.com/open-policy-agent/opa/releases/download/v{version}/{asset}"

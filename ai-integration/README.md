@@ -69,7 +69,7 @@ Candidate inquiry JSON has `request_id`, `tenant_id`, `query_type` (`lookup_by_e
 
 ## Privacy and policy boundary
 
-I limit raw uploads to 512 KiB, parsed in a short-lived process with a six-second deadline and POSIX CPU/memory limits, and never intentionally stored or logged. Text PDFs are limited to 30 pages; encrypted/scanned-only PDFs are rejected. DOCX/TXT evidence uses section 1, not physical pagination. Multipart bodies remain below the disk-spooling threshold. Deployment proxies, OS swap and external logging remain deployment responsibilities.
+I limit raw uploads to 512 KiB, parsed in a short-lived process with a six-second deadline and POSIX CPU limits (Linux also enforces a 512 MiB address-space cap; macOS does not support that cap reliably), and never intentionally stored or logged. Text PDFs are limited to 30 pages; encrypted/scanned-only PDFs are rejected. DOCX/TXT evidence uses section 1, not physical pagination. Multipart bodies remain below the disk-spooling threshold. Deployment proxies, OS swap and external logging remain deployment responsibilities.
 
 The PII scrubbing boundary **projects text into approved skill IDs and page references**. No original sentences, names, contact details, schools, demographics or other free text are sent to Hermes/Groq or OPA. This is deliberately narrower than general résumé understanding: it recognizes literal aliases, not proficiency, negation or context. Reviewers must verify mentions against the original document. HMAC identifiers are pseudonymous, not anonymous; protect the SQLite file and stable HMAC key. Rotating that key requires migrating identifiers.
 
