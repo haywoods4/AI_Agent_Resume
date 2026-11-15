@@ -59,4 +59,4 @@ I set `TEST_REDIS_URL` only when a local test Redis service is running. GitHub A
 
 ## My remaining release checks
 
-I still need the currently posted assignment requirements verified in UMGC, a successful live Groq smoke run with my key, and team review of the integration decisions. I have not merged any team PR or submitted coursework. I keep the single-reviewer token and single-worker SQLite limitations explicit. My integration branch includes the other team PRs, so I will coordinate their merge order rather than merging competing versions independently.
+I verified the posted UMGC assignment and completed the synthetic live Groq smoke run, saved review, and audit retrieval ([evidence](ai-integration/docs/live-verification-2026-11-15.md)). I still need team review of the integration decisions and final release approval. I have not merged any team PR or submitted coursework. I keep the single-reviewer token and single-worker SQLite limitations explicit. My integration branch includes the other team PRs, so I will coordinate their merge order rather than merging competing versions independently.
