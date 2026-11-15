@@ -2,7 +2,7 @@
 
 [Open this Alpha in GitHub Codespaces](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration)
 
-1. Sign in to GitHub and confirm **Create codespace** for `justin/alpha-integration`. Your GitHub account must have access to the repository. A professor without repository access needs the group owner to grant it; this button cannot bypass a private repository.
+1. Sign in to GitHub and confirm **Create codespace** for `justin/alpha-integration`. The repository is public; a GitHub account eligible to use Codespaces and available quota are required.
 2. Wait for the setup task to install Python/Node dependencies, verify OPA, and download the pinned public MiniLM model (~87 MB). The private **Resume Alpha** preview opens on port **5173**. If it does not, open Ports → Resume Alpha → Open in Browser.
 3. Choose **Create an account** in the application. On a new codespace the first account owns that isolated classroom workspace. Later accounts need its approval.
 4. Open **Try a synthetic example instead**, then click the complete and missing-skills examples. No file download is needed. Alternatively, upload the repository’s synthetic fixtures. Expand evidence, check it against the fixture, save a human review and inspect audits.

@@ -6,11 +6,11 @@ A classroom résumé-review application built with React, FastAPI, SQLite and Op
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration)
 
-1. Sign in to GitHub, confirm access to this repository and create the codespace.
+1. Sign in to GitHub and create the codespace from this public repository.
 2. Wait for setup, then open the private **Resume Alpha** preview on port **5173**.
 3. Create an account and choose **Try a synthetic example instead**. Compare the complete and missing-skills examples, expand their evidence and save a human review.
 
-The default cloud demo runs actual **MiniLM neural inference**, OPA and SQLite without an API key or a server on your computer. GitHub login, repository access and available Codespaces quota are still required. This is a private development preview, not an anonymous or always-on hosted website. See [the launch guide](CODESPACES.md) for setup, costs and troubleshooting.
+The default cloud demo runs actual **MiniLM neural inference**, OPA and SQLite without an API key or a server on your computer. GitHub login, Codespaces eligibility and available quota are still required. This is a private development preview, not an anonymous or always-on hosted website. See [the launch guide](CODESPACES.md) for setup, costs and troubleshooting.
 
 **Branch status:** the integrated Alpha is on [`justin/alpha-integration`](https://github.com/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration), awaiting team approval in [PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4) against `develop`. The default `main` branch does not yet contain this integrated Alpha. Updated interface contracts are separately awaiting approval in [PR #5](https://github.com/haywoods4/AI_Agent_Resume/pull/5).
 
