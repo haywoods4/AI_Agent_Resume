@@ -123,3 +123,27 @@ def test_audit_tenant_isolation(client):
         headers={"Authorization": f"Bearer {settings.reviewer_token}"},
     ) as other:
         assert other.get("/api/v1/audit-logs").json()["total_records"] == 0
+
+
+def test_failed_write_rolls_back_and_can_retry(client):
+    db = client.app.state.store.db
+    db.execute(
+        "CREATE TRIGGER fail_save BEFORE INSERT ON evaluations "
+        "BEGIN SELECT RAISE(ABORT, 'fixture failure'); END"
+    )
+    result = submit(client)
+    assert result.status_code == 503
+    assert result.json()["error"] == "DEPENDENCY"
+    assert db.execute("SELECT count(*) FROM evaluations").fetchone()[0] == 0
+    assert db.execute("SELECT count(*) FROM decision_audit").fetchone()[0] == 0
+    db.execute("DROP TRIGGER fail_save")
+    assert submit(client).json()["verdict"] == "PASS"
+
+
+def test_error_contract_is_documented_and_does_not_echo_input(client):
+    schema = client.get("/openapi.json").json()
+    responses = schema["paths"]["/api/v1/resumes/upload"]["post"]["responses"]
+    assert {"400", "401", "413", "503"} <= set(responses)
+    result = submit(client, candidate_id="private@example.invalid")
+    assert result.json()["error"] == "VALIDATION_ERROR"
+    assert "private@example.invalid" not in result.text

@@ -10,6 +10,21 @@ I integrated the shared routes below with the working pipeline. I retain the ori
 - I send only approved skill IDs and page references to the model. I do not claim extraction of experience, degrees or certifications. I call OPA at `/v1/data/resume/screening/result`, validate its evidence result, and map it to the shared verdict envelope. I require human review for every outcome.
 - I consolidate the SQLite persistence in `app/store.py`. I do not run the old simulated root endpoint or maintain a second `db.sqlite3`. I preserve the backend contribution in Git history and use root `main.py` as the integrated entry point.
 
+## My error response contract
+
+I document error schemas in `/openapi.json` and use `error` as the stable machine-readable code, with optional `message` and validation `fields`. I omit rejected input values. I followed Sophia's PR #3 request to make error responses explicit for frontend integration.
+
+| HTTP | My response example | Meaning |
+|---|---|---|
+| 400 | `{"error":"VALIDATION_ERROR","fields":[{"location":["body","candidate_id"],"type":"uuid_parsing"}]}` | Invalid or unsupported input |
+| 401 | `{"error":"UNAUTHORIZED"}` | Missing or incorrect reviewer token |
+| 413 | `{"error":"PAYLOAD_TOO_LARGE"}` | Request exceeds my buffer or upload limit; an optional message may describe the limit |
+| 409 | `{"error":"CONFLICT","message":"..."}` | Conflicting retry or immutable review |
+| 503 | `{"error":"DEPENDENCY","message":"Result could not be saved"}` | SQLite write failure; I return503 rather than expose an internal500 |
+| 429 | `{"error":"RATE_LIMITED"}` | Reviewer request limit; a capacity failure may instead use `CAPACITY_EXCEEDED` |
+
+I distinguish a saved `NEEDS_REVIEW` evaluation (HTTP200 with a dependency failure code) from a database failure where I cannot promise the result was saved (HTTP503).
+
 ## Original interface proposal (retained for review)
 
 # Agentic Hiring Platform: Interface Contracts & Specifications

@@ -9,6 +9,7 @@ from typing import Annotated
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from redis.asyncio import Redis
 
 from app.contracts import Evaluation, Inquiry, Review
@@ -18,6 +19,12 @@ from app.privacy import PrivacyError, jobs
 from app.providers import DemoAgent, DependencyError, HermesClient, OPAClient
 from app.settings import Settings
 from app.store import ConflictError, Store
+
+
+class ErrorResponse(BaseModel):
+    error: str
+    message: str | None = None
+    fields: list[dict] | None = None
 
 
 class RequestGuard:
@@ -135,8 +142,23 @@ def create_app(settings: Settings | None = None, agent=None, policy=None, cache=
                 await actual_cache.aclose()
             store.close()
 
-    app = FastAPI(title="Resume AI integration", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title="Resume AI integration",
+        version="0.1.0",
+        lifespan=lifespan,
+        responses={
+            code: {"model": ErrorResponse} for code in (400, 401, 403, 404, 409, 413, 429, 503)
+        },
+    )
     app.add_middleware(RequestGuard, settings=settings)
+
+    @app.exception_handler(HTTPException)
+    async def http_error(request, error):
+        codes = {404: "NOT_FOUND", 413: "PAYLOAD_TOO_LARGE"}
+        return JSONResponse(
+            {"error": codes.get(error.status_code, "REQUEST_ERROR"), "message": str(error.detail)},
+            error.status_code,
+        )
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request, error):
