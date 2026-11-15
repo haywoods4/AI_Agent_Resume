@@ -17,13 +17,14 @@ jobs:
       run:
         working-directory: ai-integration
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '22'
+          package-manager-cache: false
       - run: pip install uv==0.13.5
       - run: uv sync --frozen --extra keyless
       - run: uv run --extra keyless python scripts/setup_opa.py
