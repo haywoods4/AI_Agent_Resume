@@ -16,7 +16,7 @@ The default cloud demo runs actual **MiniLM neural inference**, OPA and SQLite w
 
 ## What is included
 
-- Account creation, sign-in and owner approval of additional reviewers in a shared classroom workspace.
+- Account creation and sign-in, with immediate demo access and owner approval for additional live-workspace reviewers.
 - Synthetic examples and résumé upload, approved-skill evidence extraction and explicit policy outcomes.
 - Saved human reviews, SQLite audit history and optional tenant-scoped Redis contact lookup.
 - Three clearly labeled execution modes: keyless local MiniLM, live Hermes Agent with Groq, and a simulated fixture mode for development.
@@ -47,7 +47,7 @@ npm ci
 npm run dev
 ```
 
-Open the Vite URL and create an account or sign in. The first account on a fresh installation owns the workspace; subsequent accounts require owner approval. This local command uses a **simulated model**, with real OPA and SQLite. It is not evidence of live AI inference.
+Open the Vite URL and create an account or sign in. Demo accounts enter immediately and share the synthetic demo workspace. The first account owns the workspace; additional accounts receive reviewer access, not owner permissions. This local command uses a **simulated model**, with real OPA and SQLite. It is not evidence of live AI inference.
 
 ## Run live Hermes/Groq
 

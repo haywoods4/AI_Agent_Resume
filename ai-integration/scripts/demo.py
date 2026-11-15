@@ -16,6 +16,7 @@ sys.path.insert(0, str(root))
 subprocess.run([sys.executable, "scripts/init_env.py"], check=True)
 load_dotenv(root / ".env", override=False)
 os.environ["AI_MODE"] = "keyless" if "--keyless" in sys.argv else "demo"
+os.environ["DEMO_OPEN_SIGNUP"] = "true"
 os.environ["DATABASE_PATH"] = "data/demo.sqlite"
 binary = root / "tools" / ("opa.exe" if os.name == "nt" else "opa")
 if not binary.exists():

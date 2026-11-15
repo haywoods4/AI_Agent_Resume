@@ -4,7 +4,7 @@
 
 1. Sign in to GitHub and confirm **Create codespace** for `justin/alpha-integration`. The repository is public; a GitHub account eligible to use Codespaces and available quota are required.
 2. Wait for the setup task to install Python/Node dependencies, verify OPA, and download the pinned public MiniLM model (~87 MB). The private **Resume Alpha** preview opens on port **5173**. If it does not, open Ports → Resume Alpha → Open in Browser.
-3. Choose **Create an account** in the application. On a new codespace the first account owns that isolated classroom workspace. Later accounts need its approval.
+3. Choose **Create an account** in the application. Signup opens the demo immediately, with no approval wait. The first account owns the workspace; later accounts are reviewers. All demo accounts share its synthetic records. Existing pending accounts can sign in after updating the demo.
 4. Open **Try a synthetic example instead**, then click the complete and missing-skills examples. No file download is needed. Alternatively, upload the repository’s synthetic fixtures. Expand evidence, check it against the fixture, save a human review and inspect audits.
 5. Stop the codespace when finished. Download any required evidence before deleting it. Deletion removes its local accounts/data; stopping preserves workspace files but may still incur storage usage.
 
@@ -40,3 +40,9 @@ uv run --extra keyless python scripts/alpha_smoke.py
 The test suite covers all 64 observed-skill subsets across the six current catalog skills with actual model inference, adversarial wrong-model outputs, keyless upload/privacy behavior, and real OPA integration. The original live Hermes/Groq instructions remain in the root README.
 
 **Verified cloud workflow:** on November 15, 2026, a fresh two-core, 8 GB GitHub Codespace completed setup and opened the private HTTPS preview. Browser checks covered account creation, complete and missing-skills examples, evidence inspection, saved human review, logout and sign-in persistence. The complete example showed four of four required skills; the missing-skills example showed one of four. This used actual local MiniLM inference and OPA, not Groq or simulated output. Compute was stopped after verification. These results do not guarantee available quota, future provisioning success or production readiness.
+
+## Update an existing codespace
+
+Existing codespaces do not automatically pull new commits. Save work first. In its terminal, run `git status --short` and confirm the branch is `justin/alpha-integration`. With a clean checkout, run `git pull --ff-only origin justin/alpha-integration`. If Git reports local changes or a divergent branch, preserve that work rather than resetting it. Stop the codespace from GitHub, then reopen it to restart the app with the updated code. Sign in again; existing account passwords and saved data remain intact. No container rebuild is needed for this signup change.
+
+Immediate access is enabled only by the demo launcher (`DEMO_OPEN_SIGNUP=true`) in simulated/keyless mode. It does not persist approval into live mode, grant owner permissions or open the private preview to the public. Live Hermes workspaces still require owner approval of additional reviewers. Use synthetic data in the shared demo.

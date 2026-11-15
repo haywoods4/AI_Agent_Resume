@@ -51,7 +51,7 @@ I start React as above. `uv run python scripts/smoke_hermes.py` tests the live a
 
 ## Integration contracts
 
-I preserve `Authorization: Bearer <REVIEWER_TOKEN>` for scripts and API clients; the browser instead uses local username/password login and an HttpOnly session cookie. I configure one classroom tenant. New reviewer accounts require owner approval; this does not provide separate customer workspaces. I bind development servers locally and run one FastAPI worker for my SQLite prototype.
+I preserve `Authorization: Bearer <REVIEWER_TOKEN>` for scripts and API clients; the browser instead uses local username/password login and an HttpOnly session cookie. I configure one classroom tenant. Live-workspace reviewer accounts require owner approval; this does not provide separate customer workspaces. I bind development servers locally and run one FastAPI worker for my SQLite prototype.
 
 | Route | Purpose |
 |---|---|
@@ -98,7 +98,7 @@ I track my assignment evidence and remaining dependencies in [Unit 5 readiness a
 
 ## My in-app account setup
 
-I choose **Create an account** on the sign-in page, enter a username and confirm a password of at least 12 characters. On a completely fresh local installation with no existing configured account, the first account becomes the owner. Registration is serialized in SQLite so simultaneous requests cannot create two owners. Later accounts remain pending and cannot read résumés or audits or submit evaluations. The owner signs in, opens **Account requests**, loads requests and explicitly approves intended collaborators. Approved reviewers share this one classroom workspace; they do not gain account-administration access.
+I choose **Create an account** on the sign-in page, enter a username and confirm a password of at least 12 characters. On a completely fresh local installation with no existing configured account, the first account becomes the owner. Registration is serialized in SQLite so simultaneous requests cannot create two owners. In live mode, later accounts remain pending and cannot read résumés or audits or submit evaluations. Demo/keyless launches instead grant immediate effective reviewer access without saving live approval; existing pending demo users can sign in directly. Demo accounts share synthetic records, never owner privileges. The owner signs in, opens **Account requests**, loads requests and explicitly approves intended collaborators. Approved reviewers share this one classroom workspace; they do not gain account-administration access.
 
 I preserve any existing username/password in `.env` unchanged as the owner account. Registration cannot overwrite or claim its username. New accounts persist salted scrypt hashes in the ignored `data/reviewer-accounts.sqlite`; no plaintext passwords or hashes are returned to the browser. Demo and live modes use the same account file when their databases share the data directory. `configure_login.py` remains an optional legacy setup tool, not a required signup step.
 

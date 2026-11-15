@@ -81,6 +81,12 @@ class Sessions:
         finally:
             db.close()
 
+    def effective_identity(self, user):
+        # Demo access never persists approval into a live workspace.
+        if self.settings.demo_open_signup and user["role"] == "pending":
+            return {**user, "role": "reviewer"}
+        return user
+
     def identity(self, headers):
         cookie = SimpleCookie()
         try:
@@ -99,7 +105,7 @@ class Sessions:
             if not row:
                 return None
             user = {**user, "role": row["role"]}
-        return user
+        return self.effective_identity(user)
 
     def valid(self, headers):
         return self.identity(headers) is not None
@@ -120,7 +126,7 @@ class Sessions:
             if v[1]["id"] != user["id"] and v[0] > time.monotonic()
         }
         self.active[token] = (time.monotonic() + 8 * 3600, user)
-        response = JSONResponse(user)
+        response = JSONResponse(self.effective_identity(user))
         response.set_cookie(
             COOKIE,
             token,
@@ -226,6 +232,8 @@ class Sessions:
 
         @router.post("/accounts/{account_id}/approve")
         async def approve(account_id: str, request: Request):
+            if self.settings.demo_open_signup:
+                return JSONResponse({"error": "Demo access does not require approval."}, 409)
             actor = request.state.identity
             if actor["role"] != "owner":
                 return JSONResponse({"error": "Owner access required."}, 403)

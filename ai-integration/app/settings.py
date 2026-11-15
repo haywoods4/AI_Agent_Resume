@@ -21,6 +21,7 @@ class Settings:
     reviewer_id: str = "reviewer-1"
     redis_url: str = ""
     browser_origin: str = ""
+    demo_open_signup: bool = False
     reviewer_username: str = ""
     reviewer_password_hash: str = ""
 
@@ -28,6 +29,7 @@ class Settings:
     def from_env(cls):
         return cls(
             browser_origin=codespaces_origin(),
+            demo_open_signup=os.getenv("DEMO_OPEN_SIGNUP") == "true",
             database=os.getenv("DATABASE_PATH", "data/resume.sqlite"),
             mode=os.getenv("AI_MODE", "hermes"),
             hermes_url=os.getenv("HERMES_URL", cls.hermes_url),
@@ -47,6 +49,8 @@ class Settings:
         )
 
     def validate(self):
+        if self.demo_open_signup and self.mode not in {"demo", "keyless"}:
+            raise ValueError("Open signup is only available in demo/keyless mode")
         if self.mode not in {"hermes", "demo", "keyless"}:
             raise ValueError("AI_MODE must be hermes, keyless or demo")
         if len(self.reviewer_token) < 24 or len(self.hmac_key) < 24:

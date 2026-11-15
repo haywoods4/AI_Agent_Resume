@@ -1,5 +1,6 @@
 from dataclasses import replace
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -67,7 +68,9 @@ def test_existing_owner_preserved_duplicate_and_approval(settings):
         assert login(c, "Justin").status_code == 200
 
 
-def test_registration_validation_origin_and_throttle(settings):
+@pytest.mark.parametrize("open_demo", [False, True])
+def test_registration_validation_origin_and_throttle(settings, open_demo):
+    settings = replace(settings, demo_open_signup=open_demo)
     with client_for(settings) as c:
         data = {"username": "valid-user", "password": PASSWORD}
         assert (
@@ -142,3 +145,68 @@ def test_concurrent_bootstrap_has_exactly_one_owner(settings):
     with ThreadPoolExecutor(max_workers=2) as executor:
         roles = list(executor.map(create, ["owner-a", "owner-b"]))
     assert sorted(roles) == ["owner", "pending"]
+
+
+def test_demo_signup_enters_immediately_without_live_approval(settings):
+    demo = replace(settings, demo_open_signup=True)
+    with client_for(demo) as c:
+        assert register(c, "owner").json()["role"] == "owner"
+        reviewer = register(c, "visitor").json()
+        assert reviewer["role"] == "reviewer"
+        assert c.get("/api/v1/jobs").status_code == 200
+        assert c.get("/api/v1/evaluations").status_code == 200
+        assert c.get("/api/v1/auth/accounts").status_code == 403
+        assert c.post(f"/api/v1/auth/accounts/{reviewer['id']}/approve").status_code == 409
+        assert register(c, "VISITOR").status_code == 409
+        assert c.post("/api/v1/auth/logout").status_code == 200
+        assert c.get("/api/v1/jobs").status_code == 401
+        assert login(c, "visitor").json()["role"] == "reviewer"
+    # Restart retains credentials, but open-demo access does not persist approval.
+    with client_for(demo) as c:
+        assert login(c, "visitor").json()["role"] == "reviewer"
+    with client_for(settings) as c:
+        assert login(c, "visitor").json()["role"] == "pending"
+        assert c.get("/api/v1/jobs").status_code == 403
+
+
+def test_existing_pending_demo_account_can_enter_without_owner(settings):
+    with client_for(settings) as c:
+        register(c, "owner")
+        assert register(c, "visitor").json()["role"] == "pending"
+    with client_for(replace(settings, demo_open_signup=True)) as c:
+        assert login(c, "visitor").json()["role"] == "reviewer"
+        assert c.get("/api/v1/jobs").status_code == 200
+
+
+def test_open_signup_cannot_be_enabled_for_live_mode(settings):
+    import pytest
+
+    with pytest.raises(ValueError, match="only available in demo/keyless"):
+        replace(settings, mode="hermes", demo_open_signup=True).validate()
+
+
+def test_demo_new_reviewer_can_complete_workflow(settings):
+    from tests.test_api import upload
+
+    with client_for(replace(settings, demo_open_signup=True)) as c:
+        register(c, "owner")
+        assert register(c, "visitor").json()["role"] == "reviewer"
+        response = upload(c)
+        assert response.status_code == 200
+        result = response.json()
+        assert result["requires_human_review"] is True
+        assert "private.test" not in response.text
+        review = {"outcome": "CONFIRMED_EVIDENCE", "reason": "VERIFIED_AGAINST_RESUME"}
+        saved = c.post(f"/api/v1/evaluations/{result['evaluation_id']}/review", json=review)
+        assert saved.status_code == 200 and saved.json()["status"] == "REVIEWED"
+        assert c.get("/api/v1/audit-logs").status_code == 200
+
+
+def test_demo_owner_cannot_persist_approval(settings):
+    with client_for(replace(settings, demo_open_signup=True)) as c:
+        register(c, "owner")
+        user = register(c, "visitor").json()
+        assert login(c, "owner").json()["role"] == "owner"
+        assert c.post(f"/api/v1/auth/accounts/{user['id']}/approve").status_code == 409
+    with client_for(settings) as c:
+        assert login(c, "visitor").json()["role"] == "pending"
