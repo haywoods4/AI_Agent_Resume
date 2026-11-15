@@ -8,7 +8,7 @@ A classroom résumé-review application built with React, FastAPI, SQLite and Op
 
 1. Sign in to GitHub and create the codespace from this public repository.
 2. Wait for setup, then open the private **Resume Alpha** preview on port **5173**.
-3. Create an account and choose **Try a synthetic example instead**. Compare the complete and missing-skills examples, expand their evidence and save a human review.
+3. Create an account and choose **Try complete example** or **Try missing-skills example**. Compare the complete and missing-skills examples, expand their evidence and save a human review.
 
 The default cloud demo runs actual **MiniLM neural inference**, OPA and SQLite without an API key or a server on your computer. GitHub login, Codespaces eligibility and available quota are still required. This is a private development preview, not an anonymous or always-on hosted website. See [the launch guide](CODESPACES.md) for setup, costs and troubleshooting.
 
