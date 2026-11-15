@@ -1,9 +1,9 @@
 name: AI integration
 on:
   push:
-    paths: ['ai-integration/**', 'main.py', 'database.py', 'test_main.py', 'requirements.txt', '.github/workflows/ai-integration.yml']
+    paths: ['ai-integration/**', '.devcontainer/**', 'CODESPACES.md', 'main.py', 'database.py', 'test_main.py', 'requirements.txt', '.github/workflows/ai-integration.yml']
   pull_request:
-    paths: ['ai-integration/**', 'main.py', 'database.py', 'test_main.py', 'requirements.txt', '.github/workflows/ai-integration.yml']
+    paths: ['ai-integration/**', '.devcontainer/**', 'CODESPACES.md', 'main.py', 'database.py', 'test_main.py', 'requirements.txt', '.github/workflows/ai-integration.yml']
 permissions:
   contents: read
 jobs:
@@ -25,11 +25,14 @@ jobs:
         with:
           node-version: '22'
       - run: pip install uv==0.13.5
-      - run: uv sync --frozen
-      - run: uv run python scripts/setup_opa.py
-      - run: uv run ruff check . ../main.py ../database.py ../test_main.py
+      - run: uv sync --frozen --extra keyless
+      - run: uv run --extra keyless python scripts/setup_opa.py
+      - run: uv run --extra keyless python scripts/setup_keyless.py
+      - run: bash -n ../.devcontainer/setup.sh ../.devcontainer/start.sh scripts/codespaces_run.sh
+      - run: python -m json.tool ../.devcontainer/devcontainer.json >/dev/null
+      - run: uv run --extra keyless ruff check . ../main.py ../database.py ../test_main.py
       - run: tools/opa test policies/ -v
-      - run: uv run pytest -q tests ../test_main.py
+      - run: uv run --extra keyless pytest -q tests ../test_main.py
         env:
           TEST_REDIS_URL: redis://127.0.0.1:6379/0
       - run: npm ci && npm run build

@@ -2,6 +2,12 @@
 
 I assembled the backend foundation, interface specification and AI integration on `justin/alpha-integration` for review against `develop`. I keep `main` reserved for the team's Alpha release. I preserve the original contributions in the merge history.
 
+## Launch in GitHub without installing anything locally
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration)
+
+I click the button, confirm GitHub’s codespace creation, wait for setup, and open the private **Resume Alpha** preview on port **5173**. I create an account in the app. The default uses actual downloaded **MiniLM neural inference**, real OPA and SQLite, with **no API key**. It is not the simulated fixture and does not call Hermes/Groq. I retain the separately verified Hermes/Groq mode below. See [the launch guide](CODESPACES.md) for repository access, usage limits, model scope and troubleshooting.
+
 ## My quick demo setup
 
 I use Python 3.12, uv, Node 22 or newer, and Git. From the repository root I run:

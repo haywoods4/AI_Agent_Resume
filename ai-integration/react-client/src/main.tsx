@@ -117,7 +117,7 @@ function App() {
         <button className="quiet" disabled={!!busy} onClick={() => { setSignup(!signup); setPassword(""); setConfirmPassword(""); setError(""); }}>{signup ? "Already have an account? Sign in" : "Create an account"}</button>
       </section> : role === "pending" ? <section className="card"><h1>Account created.</h1><p>Your account is waiting for the workspace owner to approve reviewer access. Résumés and audit records stay private until then.</p><button disabled={!!busy} onClick={() => void run("Checking access…", async () => { const user = await authCall("me"); await loadWorkspace(user.role); if (user.role === "pending") setNotice("Approval is still pending."); })}>Check approval</button></section> : <>
         <div className="page-heading"><div><h1>Your review feed</h1><p>Skill evidence, not hiring decisions.</p></div>
-          <span className="badge">{mode === "demo" ? "Demo · simulated AI" : mode === "hermes" ? "Live Hermes / Groq" : "Model mode unknown"}</span>
+          <span className="badge">{mode === "demo" ? "Demo · simulated AI" : mode === "hermes" ? "Live Hermes / Groq" : mode === "keyless" ? "Keyless · local MiniLM AI" : "Model mode unknown"}</span>
         </div>
         <section className="card composer" aria-labelledby="upload-title">
           <h2 id="upload-title">Add a résumé</h2>

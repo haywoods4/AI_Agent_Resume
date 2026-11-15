@@ -15,7 +15,7 @@ os.chdir(root)
 sys.path.insert(0, str(root))
 subprocess.run([sys.executable, "scripts/init_env.py"], check=True)
 load_dotenv(root / ".env", override=False)
-os.environ["AI_MODE"] = "demo"
+os.environ["AI_MODE"] = "keyless" if "--keyless" in sys.argv else "demo"
 os.environ["DATABASE_PATH"] = "data/demo.sqlite"
 binary = root / "tools" / ("opa.exe" if os.name == "nt" else "opa")
 if not binary.exists():
@@ -38,7 +38,7 @@ try:
             time.sleep(0.05)
         else:
             raise SystemExit("OPA did not become ready")
-    print("Demo model (not live inference), real OPA, SQLite. Reviewer token is in .env.")
+    print(f"Mode: {os.environ['AI_MODE']}. Real OPA and SQLite. Create an account in the app.")
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000)
 finally:
     policy.terminate()

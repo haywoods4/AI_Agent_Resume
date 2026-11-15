@@ -5,6 +5,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Annotated
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -50,9 +51,14 @@ class RequestGuard:
         if not bearer:
             # Browser sessions are local-only; cross-origin writes fail before body parsing.
             host = headers.get(b"host", b"").decode().split(":")[0]
-            if host not in {"localhost", "127.0.0.1"}:
+            allowed_hosts = {"localhost", "127.0.0.1"}
+            if self.settings.browser_origin:
+                allowed_hosts.add(urlparse(self.settings.browser_origin).hostname)
+            if host not in allowed_hosts:
                 return await JSONResponse({"error": "LOCAL_LOGIN_ONLY"}, 403)(scope, receive, send)
-            if scope["method"] != "GET" and headers.get(b"origin", b"").decode() not in ORIGINS:
+            if scope["method"] != "GET" and headers.get(b"origin", b"").decode() not in (
+                ORIGINS | {self.settings.browser_origin} - {""}
+            ):
                 return await JSONResponse({"error": "ORIGIN_NOT_ALLOWED"}, 403)(
                     scope, receive, send
                 )
@@ -145,7 +151,14 @@ def create_app(settings: Settings | None = None, agent=None, policy=None, cache=
         settings.validate()
         jobs()  # Fail startup for invalid job configuration before processing any resume.
         store = Store(settings.database)
-        actual_agent = agent or (DemoAgent() if settings.mode == "demo" else HermesClient(settings))
+        if agent is not None:
+            actual_agent = agent
+        elif settings.mode == "keyless":
+            from app.keyless import KeylessAgent
+
+            actual_agent = KeylessAgent()
+        else:
+            actual_agent = DemoAgent() if settings.mode == "demo" else HermesClient(settings)
         actual_policy = policy or OPAClient(settings)
         actual_cache = cache or (
             Redis.from_url(

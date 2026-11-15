@@ -1,4 +1,5 @@
 import os
+import re
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
@@ -19,12 +20,14 @@ class Settings:
     tenant_id: str = "group2-corp"
     reviewer_id: str = "reviewer-1"
     redis_url: str = ""
+    browser_origin: str = ""
     reviewer_username: str = ""
     reviewer_password_hash: str = ""
 
     @classmethod
     def from_env(cls):
         return cls(
+            browser_origin=codespaces_origin(),
             database=os.getenv("DATABASE_PATH", "data/resume.sqlite"),
             mode=os.getenv("AI_MODE", "hermes"),
             hermes_url=os.getenv("HERMES_URL", cls.hermes_url),
@@ -44,8 +47,8 @@ class Settings:
         )
 
     def validate(self):
-        if self.mode not in {"hermes", "demo"}:
-            raise ValueError("AI_MODE must be hermes or demo")
+        if self.mode not in {"hermes", "demo", "keyless"}:
+            raise ValueError("AI_MODE must be hermes, keyless or demo")
         if len(self.reviewer_token) < 24 or len(self.hmac_key) < 24:
             raise ValueError("Set REVIEWER_TOKEN and PII_HMAC_KEY to independent random secrets")
         if self.reviewer_token == self.hmac_key:
@@ -60,3 +63,13 @@ class Settings:
                 url.scheme == "http" and url.hostname in {"127.0.0.1", "localhost", "::1"}
             ):
                 raise ValueError("Remote dependencies require HTTPS")
+
+
+def codespaces_origin():
+    if os.getenv("CODESPACES") != "true":
+        return ""
+    name = os.getenv("CODESPACE_NAME", "")
+    domain = os.getenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", "app.github.dev")
+    if not re.fullmatch(r"[a-z0-9-]+", name) or domain != "app.github.dev":
+        raise ValueError("Unexpected Codespaces host; refuse an untrusted browser origin")
+    return f"https://{name}-5173.{domain}"

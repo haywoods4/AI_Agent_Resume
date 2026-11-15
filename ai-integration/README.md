@@ -107,3 +107,9 @@ I use random server-side sessions with HttpOnly, SameSite=Strict cookies. Sessio
 This remains **localhost HTTP, one classroom tenant and one API worker**, not a public production identity service. Cookie login accepts the documented local ports 5173/8000, deliberately without Secure for local HTTP. Shared hosting requires HTTPS/Secure cookies, deployment-specific trusted origins, durable sessions, distributed throttling, retention/access revocation/password recovery and an explicit owner-provisioning policy. I do not deploy this configuration publicly or claim separate user-owned workspaces. The API Bearer contract remains compatible.
 
 My simple activity feed keeps upload and human evidence review prominent, with technical and audit details collapsed. No policy result becomes a hiring decision.
+
+## My keyless neural demo
+
+I use the [GitHub Codespaces launch guide](../CODESPACES.md) for a browser-hosted classroom workspace with no model API key. The default there is `AI_MODE=keyless`: actual pinned MiniLM ONNX neural inference on approved skill IDs, real OPA and SQLite. It is not Hermes/Groq or the deterministic demo fixture. I retain all three modes with explicit labels. The model chooses evidence matches; unsupported neural predictions fail closed at the same exact-evidence validator.
+
+For a local development check only, I install `uv sync --frozen --extra keyless`, run `uv run --extra keyless python scripts/setup_keyless.py`, then `uv run --extra keyless python scripts/demo.py --keyless`. I do not need local installation when using Codespaces. I never describe a local test as proof that fresh cloud provisioning passed.

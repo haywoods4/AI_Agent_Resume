@@ -79,6 +79,8 @@ class ScreeningPipeline:
                 failure_code="PROCESSING_INTERRUPTED",
                 model_version=self.settings.model_version
                 if self.settings.mode == "hermes"
+                else "minilm-l6-v2-1110a243"
+                if self.settings.mode == "keyless"
                 else "demo-fixture-v1",
             )
             # Persist before remote work: a crash cannot silently erase an admitted evaluation.

@@ -21,7 +21,13 @@ OPA = Path(__file__).resolve().parent.parent / "tools" / "opa"
 
 
 @pytest.mark.skipif(not OPA.exists(), reason="Run scripts/setup_opa.py to test the real OPA engine")
-def test_real_opa_end_to_end(settings):
+@pytest.mark.parametrize("mode", ["demo", "keyless"])
+def test_real_opa_end_to_end(settings, mode):
+    if mode == "keyless":
+        pytest.importorskip("onnxruntime")
+        if not Path("data/keyless-model/model.onnx").exists():
+            pytest.skip("Run scripts/setup_keyless.py for actual neural inference")
+    settings = replace(settings, mode=mode)
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]

@@ -29,3 +29,7 @@ The lead should review PR #4 against develop, verify current-head CI, exercise t
 ## Remaining technical debt
 
 I limit SQLite to one worker; durable sessions, distributed throttling, authenticated roles/tenant claims and deployment HTTPS remain future shared-deployment work. I use literal skill matching, so context/negation and proficiency require human verification. I keep contact identifiers pseudonymous, not anonymous; SQLite is not encrypted at rest. I do not claim fairness validation, legal acceptance, broader candidate/job CRUD or arbitrary qualification extraction. I record unavailable billing cost honestly. Team acceptance and release approval remain pending.
+
+## Keyless launch addition
+
+I added a GitHub Codespaces launch configuration and a keyless pretrained MiniLM neural-inference mode. The separate original live Hermes/Groq mode remains intact. The keyless model receives only approved skill IDs, drives structured evidence predictions, and fails closed when predictions contradict the document facts. Actual model tests cover all 64 combinations of the six current catalog skills plus adversarial false predictions and real OPA API integration. This validates the narrow classroom evidence task, not general résumé understanding, proficiency or hiring fairness. The current PR checks cover this code; fresh Codespaces provisioning remains unverified until someone with authorized Codespaces access launches it. A repository button is not an always-on public site or a promise of unlimited free compute.

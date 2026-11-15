@@ -122,7 +122,13 @@ class Sessions:
         self.active[token] = (time.monotonic() + 8 * 3600, user)
         response = JSONResponse(user)
         response.set_cookie(
-            COOKIE, token, httponly=True, samesite="strict", max_age=8 * 3600, path="/api"
+            COOKIE,
+            token,
+            httponly=True,
+            secure=bool(self.settings.browser_origin),
+            samesite="strict",
+            max_age=8 * 3600,
+            path="/api",
         )
         return response
 
