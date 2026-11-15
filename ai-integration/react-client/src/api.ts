@@ -1,3 +1,6 @@
+export class ApiError extends Error {
+  constructor(message: string, public status: number) { super(message); }
+}
 export interface Evaluation {
   evaluation_id: string;
   candidate_id: string;
@@ -44,18 +47,19 @@ export function apiClient(token: string) {
     const response = await fetch(path, {
       method: body === undefined ? "GET" : "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(token ? {Authorization: `Bearer ${token}`} : {}),
         ...(form ? {} : { "Content-Type": "application/json" }),
       },
       body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     });
     const result = await response.json();
     if (!response.ok)
-      throw new Error(
+      throw new ApiError(
         result.message ??
           result.detail ??
           result.error ??
           `Request failed (${response.status})`,
+        response.status,
       );
     return result;
   }

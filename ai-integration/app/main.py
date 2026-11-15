@@ -17,6 +17,7 @@ from app.lookup import CandidateLookup
 from app.pipeline import ScreeningPipeline
 from app.privacy import PrivacyError, jobs
 from app.providers import DemoAgent, DependencyError, HermesClient, OPAClient
+from app.sessions import ORIGINS, Sessions
 from app.settings import Settings
 from app.store import ConflictError, Store
 
@@ -30,8 +31,9 @@ class ErrorResponse(BaseModel):
 class RequestGuard:
     """Authenticate before buffering bodies; bound requests below multipart's disk-spool size."""
 
-    def __init__(self, app, settings: Settings):
+    def __init__(self, app, settings: Settings, sessions: Sessions):
         self.app, self.settings = app, settings
+        self.sessions = sessions
         self.count = 0
         self.reset = time.monotonic() + 60
 
@@ -40,8 +42,19 @@ class RequestGuard:
             return await self.app(scope, receive, send)
         headers = dict(scope.get("headers", []))
         expected = f"Bearer {self.settings.reviewer_token}".encode()
-        if not secrets.compare_digest(headers.get(b"authorization", b""), expected):
+        bearer = secrets.compare_digest(headers.get(b"authorization", b""), expected)
+        login = scope["path"] == "/api/v1/auth/login"
+        if not login and not bearer and not self.sessions.valid(headers):
             return await JSONResponse({"error": "UNAUTHORIZED"}, 401)(scope, receive, send)
+        if not bearer:
+            # Browser sessions are local-only; cross-origin writes fail before body parsing.
+            host = headers.get(b"host", b"").decode().split(":")[0]
+            if host not in {"localhost", "127.0.0.1"}:
+                return await JSONResponse({"error": "LOCAL_LOGIN_ONLY"}, 403)(scope, receive, send)
+            if scope["method"] != "GET" and headers.get(b"origin", b"").decode() not in ORIGINS:
+                return await JSONResponse({"error": "ORIGIN_NOT_ALLOWED"}, 403)(
+                    scope, receive, send
+                )
         if time.monotonic() >= self.reset:
             self.count, self.reset = 0, time.monotonic() + 60
         self.count += 1
@@ -150,7 +163,9 @@ def create_app(settings: Settings | None = None, agent=None, policy=None, cache=
             code: {"model": ErrorResponse} for code in (400, 401, 403, 404, 409, 413, 429, 503)
         },
     )
-    app.add_middleware(RequestGuard, settings=settings)
+    sessions = Sessions(settings)
+    app.include_router(sessions.router())
+    app.add_middleware(RequestGuard, settings=settings, sessions=sessions)
 
     @app.exception_handler(HTTPException)
     async def http_error(request, error):

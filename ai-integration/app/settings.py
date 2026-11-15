@@ -19,6 +19,8 @@ class Settings:
     tenant_id: str = "group2-corp"
     reviewer_id: str = "reviewer-1"
     redis_url: str = ""
+    reviewer_username: str = ""
+    reviewer_password_hash: str = ""
 
     @classmethod
     def from_env(cls):
@@ -37,6 +39,8 @@ class Settings:
             tenant_id=os.getenv("TENANT_ID", "group2-corp"),
             reviewer_id=os.getenv("REVIEWER_ID", "reviewer-1"),
             redis_url=os.getenv("REDIS_URL", ""),
+            reviewer_username=os.getenv("REVIEWER_USERNAME", ""),
+            reviewer_password_hash=os.getenv("REVIEWER_PASSWORD_HASH", ""),
         )
 
     def validate(self):

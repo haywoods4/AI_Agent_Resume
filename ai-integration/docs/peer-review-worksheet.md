@@ -1,3 +1,9 @@
+# Historical peer-review worksheet
+
+I keep the original worksheet below as a planning template, not current status. I have since completed my [formal review of Sophia’s backend](https://github.com/haywoods4/AI_Agent_Resume/pull/2#pullrequestreview-5835176477) and received the actual feedback linked in [current readiness](unit5-readiness.md). References below to waiting for code/feedback describe the earlier state only. They do not replace the posted reviews or imply approval of the current Alpha assembly.
+
+---
+
 # My peer-review and refinement-report worksheet
 
 I am waiting for my teammates to implement their modules and provide feedback. I have not completed a formal peer review, and I will not submit this worksheet as a completed review.

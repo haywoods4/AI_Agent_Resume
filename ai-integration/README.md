@@ -9,6 +9,7 @@ I use Python 3.12, [uv](https://docs.astral.sh/uv/), Node 22+, and internet for 
 ```sh
 uv sync --frozen
 uv run python scripts/init_env.py
+uv run python scripts/configure_login.py
 uv run python scripts/setup_opa.py
 uv run python scripts/demo.py
 ```
@@ -21,7 +22,7 @@ npm ci
 npm run dev
 ```
 
-I open the URL Vite prints and copy `REVIEWER_TOKEN` from the local `.env` into the access-token field. I upload a small text-based PDF, DOCX or TXT with skills such as Python, FastAPI, SQL and Git. I review the evidence against the original document and save my reviewer outcome. I use a demo with a deterministic model fixture, **real OPA**, and SQLite at `data/demo.sqlite`; it does not call Groq.
+I open the URL Vite prints and sign in with the username and password I chose in `configure_login.py`. I upload a small text-based PDF, DOCX or TXT with skills such as Python, FastAPI, SQL and Git. I review the evidence against the original document and save my reviewer outcome. I use a demo with a deterministic model fixture, **real OPA**, and SQLite at `data/demo.sqlite`; it does not call Groq.
 
 ## Use actual Hermes and Groq
 
@@ -51,7 +52,7 @@ I start React as above. `uv run python scripts/smoke_hermes.py` tests the live a
 
 ## Integration contracts
 
-I require `Authorization: Bearer <REVIEWER_TOKEN>`. I currently configure one configured tenant and reviewer. I will replace that boundary with my team’s authentication service before shared deployment. I bind development servers locally and run one FastAPI worker for my SQLite prototype.
+I preserve `Authorization: Bearer <REVIEWER_TOKEN>` for scripts and API clients; the browser instead uses local username/password login and an HttpOnly session cookie. I currently configure one configured tenant and reviewer. I will replace that boundary with my team’s authentication service before shared deployment. I bind development servers locally and run one FastAPI worker for my SQLite prototype.
 
 | Route | Purpose |
 |---|---|
@@ -95,3 +96,11 @@ I run the real OPA integration test when `tools/opa` is installed. I exercise re
 Upstream Hermes is MIT licensed; its downloaded source retains its LICENSE and attribution. OPA retains its upstream license. Generated dependencies and vendor downloads are ignored.
 
 I track my assignment evidence and remaining dependencies in [Unit 5 readiness and ownership](docs/unit5-readiness.md).
+
+## My local reviewer sign-in
+
+I run `uv run python scripts/configure_login.py` once, choose a username and a password of at least 12 characters, and restart the API. I store only a salted scrypt password hash in the ignored, owner-readable `.env`; there is no default password or public registration. I never commit or share credentials. Changing the password requires this setup command and an API restart, which also revokes all sessions.
+
+I use a random server-side session with an HttpOnly, SameSite=Strict cookie. It expires after eight hours, on logout, on another login, or on API restart. I limit login attempts and reject cross-origin writes. The UI clears its feed on sign-out or an expired session. I restrict this cookie login to localhost HTTP (ports 5173/8000); the cookie deliberately lacks Secure for this local-only demo. I require HTTPS, Secure cookies, configurable trusted origins, durable sessions, proper identities/roles and distributed throttling before any shared deployment. This is one reviewer, not a multi-user authentication system. Existing Bearer-token integrations remain compatible.
+
+My single-column activity feed has an upload composer, expandable evidence reviews, explicit demo/live labeling, and optional lookup/audit details. I do not turn policy `allowed`/`blocked` into accept/reject decisions. All evidence requires a human check.

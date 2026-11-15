@@ -10,6 +10,7 @@ I use Python 3.12, uv, Node 22 or newer, and Git. From the repository root I run
 cd ai-integration
 uv sync --frozen
 uv run python scripts/init_env.py
+uv run python scripts/configure_login.py
 uv run python scripts/setup_opa.py
 uv run python scripts/demo.py
 ```
@@ -22,7 +23,7 @@ npm ci
 npm run dev
 ```
 
-I open the Vite URL, enter `REVIEWER_TOKEN` from `ai-integration/.env`, and upload `fixtures/allowed.txt` and `fixtures/blocked.txt` using the backend-engineer job. I check both policy outcomes, record a human review, and use “Check saved audit records” to verify persistence. This demo uses a **simulated model, real OPA and SQLite**, not live Groq.
+I open the Vite URL, sign in with my configured reviewer username and password, and upload `fixtures/allowed.txt` and `fixtures/blocked.txt` using the backend-engineer job. I check both policy outcomes, record a human review, and use “Check saved audits” under “Record lookup & audit tools” to verify persistence. This demo uses a **simulated model, real OPA and SQLite**, not live Groq.
 
 From `ai-integration` I can also run `uv run python scripts/alpha_smoke.py` to save the safe results in `data/alpha-evidence.json`.
 
@@ -59,4 +60,4 @@ I set `TEST_REDIS_URL` only when a local test Redis service is running. GitHub A
 
 ## My remaining release checks
 
-I verified the posted UMGC assignment and completed the synthetic live Groq smoke run, saved review, and audit retrieval ([evidence](ai-integration/docs/live-verification-2026-11-15.md)). I still need team review of the integration decisions and final release approval. I have not merged any team PR or submitted coursework. I keep the single-reviewer token and single-worker SQLite limitations explicit. My integration branch includes the other team PRs, so I will coordinate their merge order rather than merging competing versions independently.
+I verified the posted UMGC assignment and completed the synthetic live Groq smoke run, saved review, and audit retrieval ([evidence](ai-integration/docs/live-verification-2026-11-15.md)). I still need team review of the integration decisions and final release approval. I have not merged any team PR or submitted coursework. I keep the local single-reviewer login and single-worker SQLite limitations explicit. My integration branch includes the other team PRs, so I will coordinate their merge order rather than merging competing versions independently.
