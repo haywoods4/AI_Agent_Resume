@@ -98,13 +98,15 @@ function App() {
     setEmail(""); setFile(null); setChecked(false); setError(""); setNotice("");
   }
   return <>
-    <header className="topbar"><a href="#main" className="brand">Résumé<span> / Alpha</span></a>
+    <a className="skip-link" href="#main">Skip to workspace</a>
+    <header className="topbar"><a href="#main" className="brand"><span className="brand-mark" aria-hidden="true">✳</span>Résumé<span className="brand-tag">Alpha</span></a>
+      {connected && role !== "pending" && <nav aria-label="Workspace"><a href="#main">Overview</a><a href="#upload-title">Upload</a><a href="#activity">Reviews <span>{history.length}</span></a></nav>}
       {connected && <button className="quiet" disabled={!!busy} onClick={() => void run("Signing out…", disconnect)}>Sign out</button>}
     </header>
-    <main id="main">
+    <main id="main" tabIndex={-1}>
       {!connected ? <section className="card welcome">
-        <p className="eyebrow">REVIEWER WORKSPACE</p><h1>{signup ? "Create your account." : "Let’s review a résumé."}</h1>
-        <p>Upload a document. Check the evidence. Save your review.</p>
+        <div className="welcome-symbol" aria-hidden="true">✳</div><p className="eyebrow">YOUR REVIEW WORKSPACE</p><h1>{signup ? "Create your account." : "Good evidence. Clearer reviews."}</h1>
+        <p>One calm place to upload, check skill evidence and record your review.</p>
         <form onSubmit={e => { e.preventDefault(); void run(signup ? "Creating account…" : "Signing in…", connect); }}>
           <label htmlFor="username">Username</label>
           <input id="username" autoComplete="username" minLength={signup ? 3 : undefined} maxLength={signup ? 64 : 128} pattern={signup ? "[A-Za-z0-9._-]+" : undefined} required value={username} disabled={!!busy} onChange={e => setUsername(e.target.value)} />
@@ -116,16 +118,19 @@ function App() {
         </form>
         <button className="quiet" disabled={!!busy} onClick={() => { setSignup(!signup); setPassword(""); setConfirmPassword(""); setError(""); }}>{signup ? "Already have an account? Sign in" : "Create an account"}</button>
       </section> : role === "pending" ? <section className="card"><h1>Account created.</h1><p>Your account is waiting for the workspace owner to approve reviewer access. Résumés and audit records stay private until then.</p><button disabled={!!busy} onClick={() => void run("Checking access…", async () => { const user = await authCall("me"); await loadWorkspace(user.role); if (user.role === "pending") setNotice("Approval is still pending."); })}>Check approval</button></section> : <>
-        <div className="page-heading"><div><h1>Your review feed</h1><p>Skill evidence, not hiring decisions.</p>{(mode === "demo" || mode === "keyless") && <p className="hint">Shared demo workspace. Use synthetic résumés only.</p>}</div>
+        <div className="page-heading"><div><p className="eyebrow">RÉSUMÉ REVIEW / CLASSROOM ALPHA</p><h1>Your résumé workspace</h1><p>Upload a résumé. Explore the evidence. Make the review yours.</p>{(mode === "demo" || mode === "keyless") && <p className="hint">Shared demo workspace. Use synthetic résumés only.</p>}</div>
           <span className="badge">{mode === "demo" ? "Demo · simulated AI" : mode === "hermes" ? "Live Hermes / Groq" : mode === "keyless" ? "Keyless · local MiniLM AI" : "Model mode unknown"}</span>
         </div>
+        <section className="quick-actions" aria-label="Start a review">
+          <a className="action-tile upload-tile" href="#upload-title"><span className="tile-icon" aria-hidden="true">↑</span><strong>Upload a résumé</strong><span>Bring a PDF, DOCX or text file.</span><span className="tile-arrow" aria-hidden="true">↗</span></a>
+          {[true, false].map(complete => <button key={String(complete)} className={`action-tile ${complete ? "complete-tile" : "missing-tile"}`} disabled={!!busy} onClick={() => void run("Checking synthetic example…", () => evaluate(new File([complete ? "Synthetic Candidate. Skills: Python, FastAPI, SQL, Git." : "Synthetic Candidate. Skills: Python."], "synthetic.txt", {type: "text/plain"}), "synthetic@example.test", "backend-engineer"))}>
+            <span className="tile-icon" aria-hidden="true">{complete ? "✓" : "＋"}</span><strong>{complete ? "Try complete example" : "Try missing-skills example"}</strong><span>{complete ? "Python, FastAPI, SQL and Git." : "Python only. Find the evidence gaps."}</span><span className="tile-arrow" aria-hidden="true">↗</span>
+          </button>)}
+        </section>
+        <p className="sample-note">Examples are synthetic, not real applicants. Both use the backend-engineer role and the active model mode.</p>
         <section className="card composer" aria-labelledby="upload-title">
-          <h2 id="upload-title">Add a résumé</h2>
-          <details><summary>Try a synthetic example instead</summary>
-            <p className="hint">No real applicant data. Both examples use the backend-engineer fixture role and run the currently selected AI mode.</p>
-            <p className="hint">Complete example: “Synthetic Candidate. Skills: Python, FastAPI, SQL, Git.” Missing-skills example: “Synthetic Candidate. Skills: Python.” These are the original example contents for your evidence review.</p>
-            <div className="actions">{[true, false].map(complete => <button key={String(complete)} className="secondary" disabled={!!busy} onClick={() => void run("Checking synthetic example…", () => evaluate(new File([complete ? "Synthetic Candidate. Skills: Python, FastAPI, SQL, Git." : "Synthetic Candidate. Skills: Python."], "synthetic.txt", {type: "text/plain"}), "synthetic@example.test", "backend-engineer"))}>{complete ? "Try complete example" : "Try missing-skills example"}</button>)}</div>
-          </details>
+          <div className="section-intro"><div><p className="eyebrow">START WITH A DOCUMENT</p><h2 id="upload-title" tabIndex={-1}>Add a résumé</h2></div><span className="format-note">PDF · DOCX · TXT</span></div>
+          <details className="sample-source"><summary>Read the original synthetic examples</summary><p className="hint">Complete: “Synthetic Candidate. Skills: Python, FastAPI, SQL, Git.” Missing skills: “Synthetic Candidate. Skills: Python.” Use these originals to verify the example evidence before saving a review.</p></details>
           <form onSubmit={e => { e.preventDefault(); void run("Checking evidence…", () => evaluate()); }}>
             <fieldset disabled={!!busy}><div className="form-row">
               <div><label htmlFor="email">Candidate email</label><input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="candidate@example.com" /></div>
@@ -142,13 +147,13 @@ function App() {
       {error && <p className="message error" role="alert">{error}</p>}
       {notice && <p className="message" role="status">{notice}</p>}
       {connected && role !== "pending" && <>
-        <div className="feed-heading"><h2>Recent activity</h2><button className="quiet" disabled={!!busy} onClick={() => void run("Refreshing…", async () => { setHistory(await api.list()); setChecked(false); })}>Refresh</button></div>
+        <div className="feed-heading" id="activity"><div><p className="eyebrow">YOUR DOCUMENTS</p><h2>Recent reviews <span className="count">{history.length}</span></h2></div><button className="quiet" disabled={!!busy} onClick={() => void run("Refreshing…", async () => { setHistory(await api.list()); setChecked(false); })}>Refresh</button></div>
         {history.length === 0 && <section className="empty"><h3>No reviews yet</h3><p>Your uploaded résumés will appear here. Start with a synthetic example for this class prototype.</p></section>}
         <div className="feed">{history.map(item => {
           const open = selected === item.evaluation_id;
-          return <article className="card" key={item.evaluation_id}>
-            <div className="post-heading"><div className="avatar" aria-hidden="true">R</div><div><h3>{jobs[item.job_id]?.title ?? item.job_id}</h3><p className="hint">Record {item.evaluation_id.slice(-8)}</p></div><span className="badge">{statusLabel(item)}</span></div>
-            <p>{item.facts.observed_skills.length} skill mentions · {item.facts.required_skills.length} required skills</p>
+          return <article className={`card review-card ${open ? "is-open" : ""}`} key={item.evaluation_id}>
+            <div className="post-heading"><div className={`document-mark ${item.review ? "document-reviewed" : ""}`} aria-hidden="true"><span></span><span></span><span></span></div><div><h3>{jobs[item.job_id]?.title ?? item.job_id}</h3><p className="hint">Record {item.evaluation_id.slice(-8)}</p></div><span className={`badge ${item.review ? "status-reviewed" : "status-pending"}`}>{statusLabel(item)}</span></div>
+            <p className="coverage"><strong>{item.facts.observed_skills.length}</strong> skill mentions <span> / {item.facts.required_skills.length} required skills</span></p>
             <button className="secondary" disabled={!!busy} aria-expanded={open} aria-controls={`details-${item.evaluation_id}`} onClick={() => { setSelected(open ? null : item.evaluation_id); setChecked(false); }}>{open ? "Close details" : item.review ? "View review" : "Review evidence"}</button>
             {open && <div id={`details-${item.evaluation_id}`} className="evidence">
               {item.failure_code && <p className="error">Automated processing could not finish ({item.failure_code}). Check the evidence manually.</p>}
