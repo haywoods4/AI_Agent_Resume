@@ -47,7 +47,7 @@ tools/opa run --server --addr 127.0.0.1:8181 policies/
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --env-file .env --no-access-log
 ```
 
-I start React as above. `uv run python scripts/smoke_hermes.py` tests the live agent with synthetic skill facts. The configured Groq model is `llama-3.3-70b-versatile`; update both the Hermes profile and `INFERENCE_MODEL_VERSION` if changing it. Live provider inference requires a working Groq key and was not verified without one.
+I start React as above. `uv run python scripts/smoke_hermes.py` tests the live agent with synthetic skill facts. My setup queries the account model catalog and prefers production `openai/gpt-oss-20b`, then `openai/gpt-oss-120b`, with the original Llama model only if enabled. It updates both the Hermes profile and `INFERENCE_MODEL_VERSION`; the old Llama model is now enterprise-only in Groq’s catalog. Live provider inference requires a working Groq key and was not verified without one.
 
 ## Integration contracts
 

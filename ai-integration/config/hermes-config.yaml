@@ -1,6 +1,6 @@
 model:
   provider: groq
-  default: llama-3.3-70b-versatile
+  default: openai/gpt-oss-20b
 providers:
   groq:
     api: https://api.groq.com/openai/v1
@@ -8,7 +8,7 @@ providers:
     api_mode: chat_completions
     discover_models: false
     models:
-      - llama-3.3-70b-versatile
+      - openai/gpt-oss-20b
 # Resume evidence must not grant shell, file, browser, memory or other tools.
 platform_toolsets:
   api_server: []

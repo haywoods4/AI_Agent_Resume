@@ -10,7 +10,7 @@ class Settings:
     hermes_url: str = "http://127.0.0.1:8642/v1/chat/completions"
     hermes_key: str = ""
     hermes_model: str = "hermes-agent"
-    model_version: str = "groq/llama-3.3-70b-versatile"
+    model_version: str = "groq/openai/gpt-oss-20b"
     hermes_timeout: float = 9
     opa_url: str = "http://127.0.0.1:8181/v1/data/resume/screening/result"
     opa_timeout: float = 1
