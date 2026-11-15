@@ -1,0 +1,353 @@
+import secrets
+import sqlite3
+import time
+import uuid
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from typing import Annotated
+from urllib.parse import urlparse
+
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from redis.asyncio import Redis
+
+from app.contracts import Evaluation, Inquiry, Review
+from app.lookup import CandidateLookup
+from app.pipeline import ScreeningPipeline
+from app.privacy import PrivacyError, jobs
+from app.providers import DemoAgent, DependencyError, HermesClient, OPAClient
+from app.sessions import ORIGINS, Sessions
+from app.settings import Settings
+from app.store import ConflictError, Store
+
+
+class ErrorResponse(BaseModel):
+    error: str
+    message: str | None = None
+    fields: list[dict] | None = None
+
+
+class RequestGuard:
+    """Authenticate before buffering bodies; bound requests below multipart's disk-spool size."""
+
+    def __init__(self, app, settings: Settings, sessions: Sessions):
+        self.app, self.settings = app, settings
+        self.sessions = sessions
+        self.count = 0
+        self.reset = time.monotonic() + 60
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or not scope["path"].startswith("/api/"):
+            return await self.app(scope, receive, send)
+        headers = dict(scope.get("headers", []))
+        expected = f"Bearer {self.settings.reviewer_token}".encode()
+        bearer = secrets.compare_digest(headers.get(b"authorization", b""), expected)
+        login = scope["path"] in {"/api/v1/auth/login", "/api/v1/auth/register"}
+        identity = self.sessions.identity(headers)
+        if not login and not bearer and identity is None:
+            return await JSONResponse({"error": "UNAUTHORIZED"}, 401)(scope, receive, send)
+        if not bearer:
+            # Browser sessions are local-only; cross-origin writes fail before body parsing.
+            host = headers.get(b"host", b"").decode().split(":")[0]
+            allowed_hosts = {"localhost", "127.0.0.1"}
+            if self.settings.browser_origin:
+                allowed_hosts.add(urlparse(self.settings.browser_origin).hostname)
+            if host not in allowed_hosts:
+                return await JSONResponse({"error": "LOCAL_LOGIN_ONLY"}, 403)(scope, receive, send)
+            if scope["method"] != "GET" and headers.get(b"origin", b"").decode() not in (
+                ORIGINS | {self.settings.browser_origin} - {""}
+            ):
+                return await JSONResponse({"error": "ORIGIN_NOT_ALLOWED"}, 403)(
+                    scope, receive, send
+                )
+        if not login:
+            if scope["path"].startswith("/api/v1/auth/") and identity is None:
+                return await JSONResponse({"error": "Browser sign-in required."}, 401)(
+                    scope, receive, send
+                )
+            if (
+                not bearer
+                and identity["role"] == "pending"
+                and not scope["path"].startswith("/api/v1/auth/")
+            ):
+                return await JSONResponse({"error": "Reviewer access is pending approval."}, 403)(
+                    scope, receive, send
+                )
+            scope.setdefault("state", {})["identity"] = identity
+        if time.monotonic() >= self.reset:
+            self.count, self.reset = 0, time.monotonic() + 60
+        self.count += 1
+        if self.count > 120:
+            return await JSONResponse(
+                {"error": "RATE_LIMITED"}, 429, headers={"Retry-After": "60"}
+            )(scope, receive, send)
+        maximum = (
+            600 * 1024
+            if scope["path"] in {"/api/v1/evaluations", "/api/v1/resumes/upload"}
+            else 16384
+        )
+        body = bytearray()
+        while True:
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                return
+            body.extend(message.get("body", b""))
+            if len(body) > maximum:
+                return await JSONResponse({"error": "PAYLOAD_TOO_LARGE"}, 413)(scope, receive, send)
+            if not message.get("more_body", False):
+                break
+        delivered = False
+
+        async def buffered_receive():
+            nonlocal delivered
+            if not delivered:
+                delivered = True
+                return {"type": "http.request", "body": bytes(body), "more_body": False}
+            return await receive()
+
+        async def private_send(message):
+            if message["type"] == "http.response.start":
+                message["headers"] += [
+                    (b"cache-control", b"no-store"),
+                    (b"x-content-type-options", b"nosniff"),
+                ]
+            await send(message)
+
+        await self.app(scope, buffered_receive, private_send)
+
+
+def upload_result(evaluation, timestamp):
+    observed = {s.skill_id for s in evaluation.facts.observed_skills}
+    verdict = {"allowed": "PASS", "blocked": "FAIL", "needs_review": "NEEDS_REVIEW"}
+    return {
+        **evaluation.model_dump(),
+        "timestamp": datetime.fromtimestamp(timestamp, timezone.utc).isoformat(),
+        "verdict": verdict[evaluation.policy_status],
+        "sanitized_payload": {"skills": sorted(observed)},
+        "policy_evaluations": [
+            {
+                "rule_id": f"required_skill:{skill}",
+                "passed": skill in observed,
+                "description": f"Documented mention of {skill}",
+            }
+            for skill in evaluation.facts.required_skills
+        ]
+        if evaluation.policy
+        else [],
+        "pii_scrubbed_summary": {
+            "method": "approved_skill_projection",
+            "raw_text_retained": False,
+        },
+    }
+
+
+def create_app(settings: Settings | None = None, agent=None, policy=None, cache=None):
+    settings = settings or Settings.from_env()
+
+    @asynccontextmanager
+    async def lifespan(app):
+        settings.validate()
+        jobs()  # Fail startup for invalid job configuration before processing any resume.
+        store = Store(settings.database)
+        if agent is not None:
+            actual_agent = agent
+        elif settings.mode == "keyless":
+            from app.keyless import KeylessAgent
+
+            actual_agent = KeylessAgent()
+        else:
+            actual_agent = DemoAgent() if settings.mode == "demo" else HermesClient(settings)
+        actual_policy = policy or OPAClient(settings)
+        actual_cache = cache or (
+            Redis.from_url(
+                settings.redis_url,
+                socket_timeout=0.3,
+                socket_connect_timeout=0.3,
+                max_connections=8,
+                decode_responses=True,
+            )
+            if settings.redis_url
+            else None
+        )
+        app.state.store = store
+        app.state.pipeline = ScreeningPipeline(settings, store, actual_agent, actual_policy)
+        app.state.lookup = CandidateLookup(settings, store, actual_cache)
+        try:
+            yield
+        finally:
+            await actual_agent.close()
+            await actual_policy.close()
+            if actual_cache is not None:
+                await actual_cache.aclose()
+            store.close()
+
+    app = FastAPI(
+        title="Resume AI integration",
+        version="0.1.0",
+        lifespan=lifespan,
+        responses={
+            code: {"model": ErrorResponse} for code in (400, 401, 403, 404, 409, 413, 429, 503)
+        },
+    )
+    sessions = Sessions(settings)
+    app.include_router(sessions.router())
+    app.add_middleware(RequestGuard, settings=settings, sessions=sessions)
+
+    @app.exception_handler(HTTPException)
+    async def http_error(request, error):
+        codes = {404: "NOT_FOUND", 413: "PAYLOAD_TOO_LARGE"}
+        return JSONResponse(
+            {"error": codes.get(error.status_code, "REQUEST_ERROR"), "message": str(error.detail)},
+            error.status_code,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(request, error):
+        # FastAPI normally echoes rejected input; omit it to avoid reflecting contact data.
+        return JSONResponse(
+            {
+                "error": "VALIDATION_ERROR",
+                "fields": [{"location": e["loc"], "type": e["type"]} for e in error.errors()],
+            },
+            400,
+        )
+
+    @app.exception_handler(PrivacyError)
+    async def invalid_document(request, error):
+        return JSONResponse({"error": "VALIDATION_ERROR", "message": str(error)}, 400)
+
+    @app.exception_handler(ConflictError)
+    async def conflict(request, error):
+        return JSONResponse({"error": "CONFLICT", "message": str(error)}, 409)
+
+    @app.exception_handler(PermissionError)
+    async def forbidden(request, error):
+        return JSONResponse({"error": "FORBIDDEN"}, 403)
+
+    @app.exception_handler(sqlite3.Error)
+    async def database_error(request, error):
+        return JSONResponse({"error": "DEPENDENCY", "message": "Result could not be saved"}, 503)
+
+    @app.exception_handler(DependencyError)
+    async def dependency_error(request, error):
+        status = 429 if error.code == "CAPACITY_EXCEEDED" else 503
+        return JSONResponse({"error": error.code}, status)
+
+    @app.get("/health")
+    async def health():
+        return {"status": "ok", "mode": settings.mode}
+
+    @app.get("/api/v1/jobs")
+    async def job_catalog():
+        return jobs()
+
+    @app.post("/api/v1/candidates/inquiry")
+    async def inquiry(payload: Inquiry):
+        return await app.state.lookup.inquiry(payload)
+
+    @app.post("/api/v1/evaluations", response_model=Evaluation)
+    async def evaluate(
+        request_id: Annotated[str, Form(min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_-]+$")],
+        job_id: Annotated[str, Form(max_length=64)],
+        candidate_email: Annotated[str, Form(max_length=254)],
+        resume: Annotated[UploadFile, File()],
+        candidate_phone: Annotated[str | None, Form(max_length=30)] = None,
+    ):
+        content = await resume.read(512 * 1024 + 1)
+        await resume.close()
+        if len(content) > 512 * 1024:
+            raise HTTPException(413, "Resume must not exceed 512 KiB")
+        return await app.state.pipeline.evaluate(
+            request_id, job_id, candidate_email, candidate_phone, content, resume.filename or ""
+        )
+
+    @app.post("/api/v1/resumes/upload")
+    async def upload_resume(
+        job_id: Annotated[str, Form(min_length=1, max_length=64)],
+        file: Annotated[UploadFile, File()],
+        candidate_id: Annotated[uuid.UUID | None, Form()] = None,
+        request_id: Annotated[
+            str | None, Form(min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_-]+$")
+        ] = None,
+        candidate_email: Annotated[str | None, Form(max_length=254)] = None,
+    ):
+        request_id = request_id or uuid.uuid4().hex
+        if candidate_id and candidate_email:
+            raise PrivacyError("Supply candidate_id or candidate_email, not both")
+        opaque_id = str(
+            candidate_id or uuid.uuid5(uuid.NAMESPACE_URL, f"{settings.tenant_id}/{request_id}")
+        )
+        try:
+            content = await file.read(512 * 1024 + 1)
+        finally:
+            await file.close()
+        if len(content) > 512 * 1024:
+            raise HTTPException(413, "Resume must not exceed 512 KiB")
+        result = await app.state.pipeline.evaluate(
+            request_id,
+            job_id,
+            candidate_email or f"{opaque_id}@opaque.invalid",
+            None,
+            content,
+            file.filename or "",
+            external_candidate_id=None if candidate_email else opaque_id,
+        )
+        return upload_result(
+            result, app.state.store.evaluation_timestamp(settings.tenant_id, result.evaluation_id)
+        )
+
+    @app.get("/api/v1/audit-logs")
+    async def audit_logs(
+        job_id: str | None = None,
+        verdict: Annotated[str | None, Query(pattern=r"^(PASS|FAIL|NEEDS_REVIEW)$")] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        limit: Annotated[int, Query(ge=1, le=100)] = 20,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ):
+        for date in (start_date, end_date):
+            if date is not None and date.tzinfo is None:
+                raise PrivacyError("Audit dates must include a timezone")
+        if start_date and end_date and start_date > end_date:
+            raise PrivacyError("start_date must not follow end_date")
+        return app.state.store.audit_logs(
+            settings.tenant_id,
+            job_id,
+            verdict,
+            start_date.timestamp() if start_date else None,
+            end_date.timestamp() if end_date else None,
+            limit,
+            offset,
+        )
+
+    @app.get("/api/v1/evaluations", response_model=list[Evaluation])
+    async def evaluations():
+        return app.state.store.list_evaluations(settings.tenant_id)
+
+    @app.get("/api/v1/evaluations/{evaluation_id}", response_model=Evaluation)
+    async def evaluation(evaluation_id: str):
+        result = app.state.store.evaluation(settings.tenant_id, evaluation_id)
+        if result is None:
+            raise HTTPException(404, "Evaluation not found")
+        return result
+
+    @app.post("/api/v1/evaluations/{evaluation_id}/review", response_model=Evaluation)
+    async def review(evaluation_id: str, payload: Review, request: Request):
+        if evaluation_id in app.state.pipeline.active_evaluations:
+            raise ConflictError("Evaluation is still processing")
+        if app.state.store.evaluation(settings.tenant_id, evaluation_id) is None:
+            raise HTTPException(404, "Evaluation not found")
+        result = app.state.store.review(
+            settings.tenant_id,
+            request.state.identity["id"] if request.state.identity else settings.reviewer_id,
+            evaluation_id,
+            payload,
+        )
+        return result
+
+    return app
+
+
+app = create_app()

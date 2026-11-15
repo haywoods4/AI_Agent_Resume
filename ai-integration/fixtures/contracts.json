@@ -1,0 +1,115 @@
+{
+  "upload_fields": {
+    "request_id": "example-allowed",
+    "job_id": "backend-engineer",
+    "candidate_email": "allowed@example.invalid",
+    "resume": "allowed.txt (multipart file)"
+  },
+  "ai_request_user_content": {
+    "job_id": "backend-engineer",
+    "required_skills": [
+      "python",
+      "fastapi",
+      "sql",
+      "git"
+    ],
+    "observed_skills": [
+      {
+        "skill_id": "python",
+        "pages": [
+          1
+        ]
+      },
+      {
+        "skill_id": "fastapi",
+        "pages": [
+          1
+        ]
+      },
+      {
+        "skill_id": "sql",
+        "pages": [
+          1
+        ]
+      },
+      {
+        "skill_id": "git",
+        "pages": [
+          1
+        ]
+      }
+    ],
+    "page_count": 1
+  },
+  "ai_response_content": {
+    "skills": [
+      {
+        "skill_id": "python",
+        "status": "MENTIONED",
+        "evidence_pages": [
+          1
+        ],
+        "review_focus": "VERIFY_PROFICIENCY"
+      },
+      {
+        "skill_id": "fastapi",
+        "status": "MENTIONED",
+        "evidence_pages": [
+          1
+        ],
+        "review_focus": "VERIFY_PROFICIENCY"
+      },
+      {
+        "skill_id": "sql",
+        "status": "MENTIONED",
+        "evidence_pages": [
+          1
+        ],
+        "review_focus": "VERIFY_PROFICIENCY"
+      },
+      {
+        "skill_id": "git",
+        "status": "MENTIONED",
+        "evidence_pages": [
+          1
+        ],
+        "review_focus": "VERIFY_PROFICIENCY"
+      }
+    ]
+  },
+  "opa_request": {
+    "input": {
+      "required_skills": [
+        "python",
+        "fastapi",
+        "sql",
+        "git"
+      ],
+      "observed_skills": [
+        "python",
+        "fastapi",
+        "sql",
+        "git"
+      ]
+    }
+  },
+  "opa_response": {
+    "result": {
+      "policy_version": "job-evidence-v1",
+      "status": "REQUIREMENTS_DOCUMENTED",
+      "matched_skills": [
+        "fastapi",
+        "git",
+        "python",
+        "sql"
+      ],
+      "missing_skills": [],
+      "requires_human_review": true
+    }
+  },
+  "api_status_fields": {
+    "status": "READY_FOR_REVIEW",
+    "policy_status": "allowed",
+    "requires_human_review": true
+  }
+}

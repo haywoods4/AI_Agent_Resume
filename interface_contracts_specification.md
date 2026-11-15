@@ -2,7 +2,7 @@
 
 ## Scope and integration status
 
-This specification aligns the original interface proposal with the implemented Alpha in [integration PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4), reviewed at commit `d1ba66e4c8344d6390e20650ba7ae90bb5ef1429`. PR #5 changes documentation and its validation only. It does not introduce backend, database, Redis or model implementations into `develop`. PR #4 remains a separate team review and merge decision.
+This specification aligns the original interface proposal with the implemented Alpha in [integration PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4), reviewed at commit `d405ca70fc217fec90997d46092897cf3f15dd30`. PR #5 changes documentation and its validation only. It does not introduce backend, database, Redis or model implementations into `develop`. PR #4 remains a separate team review and merge decision.
 
 Individual contributions target `develop`; `main` remains the release branch. The original proposal and its authorship remain in Git history. This revision replaces conflicting endpoint, privacy and model examples rather than prescribing another database implementation.
 
@@ -20,7 +20,7 @@ Individual contributions target `develop`; `main` remains the release branch. Th
 
 Upload accepts text-based PDF, DOCX or TXT, maximum 512 KiB. Unsupported, encrypted, oversized or unparseable documents fail closed. Scanned-image OCR, experience, degrees and certifications are not implemented. `backend-engineer` and `frontend-engineer` are catalog job IDs. Treat returned evaluation and candidate IDs as opaque: the shared upload accepts UUIDs, while the existing internal path may return `cand_`-prefixed identifiers.
 
-Browser access uses server-side sessions and HttpOnly cookies; the configured bearer-token API remains supported. Registration does not grant unrestricted access: later accounts remain pending until the owner approves them. One classroom workspace is shared among approved reviewers; this is not a production multi-organization account system. Protected routes enforce authentication and configured tenant scope.
+Browser access uses server-side sessions and HttpOnly cookies; the configured bearer-token API remains supported. In live mode, later accounts remain pending until the owner approves them. In demo/keyless mode, registration grants immediate effective reviewer access to synthetic classroom records without persisting live approval or granting owner privileges. One classroom workspace is shared among approved reviewers; this is not a production multi-organization account system. Protected routes enforce authentication and configured tenant scope.
 
 The shared upload response includes `evaluation_id`, `candidate_id`, `job_id`, UTC `timestamp`, `verdict`, `sanitized_payload.skills`, `policy_evaluations`, and `pii_scrubbed_summary`, plus the review client's evaluation fields. `PASS` and `FAIL` describe evidence completeness only; every result requires human review. Dependency failures produce `NEEDS_REVIEW`, never an invented assessment. The summary describes allowlisted projection, not perfect PII detection.
 
@@ -160,8 +160,8 @@ PR #4's integration tests cover cache hit/miss, sensitive-record bypass, tenant 
 
 All references below are pinned to the reviewed integration version, not an assumption that it has merged:
 
-- [Routes and upload adapter](https://github.com/haywoods4/AI_Agent_Resume/blob/d1ba66e4c8344d6390e20650ba7ae90bb5ef1429/ai-integration/app/main.py)
-- [Typed payloads](https://github.com/haywoods4/AI_Agent_Resume/blob/d1ba66e4c8344d6390e20650ba7ae90bb5ef1429/ai-integration/app/contracts.py)
-- [Privacy and identifier hashing](https://github.com/haywoods4/AI_Agent_Resume/blob/d1ba66e4c8344d6390e20650ba7ae90bb5ef1429/ai-integration/app/privacy.py)
-- [SQLite store](https://github.com/haywoods4/AI_Agent_Resume/blob/d1ba66e4c8344d6390e20650ba7ae90bb5ef1429/ai-integration/app/store.py)
-- [Lookup and Redis](https://github.com/haywoods4/AI_Agent_Resume/blob/d1ba66e4c8344d6390e20650ba7ae90bb5ef1429/ai-integration/app/lookup.py)
+- [Routes and upload adapter](https://github.com/haywoods4/AI_Agent_Resume/blob/d405ca70fc217fec90997d46092897cf3f15dd30/ai-integration/app/main.py)
+- [Typed payloads](https://github.com/haywoods4/AI_Agent_Resume/blob/d405ca70fc217fec90997d46092897cf3f15dd30/ai-integration/app/contracts.py)
+- [Privacy and identifier hashing](https://github.com/haywoods4/AI_Agent_Resume/blob/d405ca70fc217fec90997d46092897cf3f15dd30/ai-integration/app/privacy.py)
+- [SQLite store](https://github.com/haywoods4/AI_Agent_Resume/blob/d405ca70fc217fec90997d46092897cf3f15dd30/ai-integration/app/store.py)
+- [Lookup and Redis](https://github.com/haywoods4/AI_Agent_Resume/blob/d405ca70fc217fec90997d46092897cf3f15dd30/ai-integration/app/lookup.py)

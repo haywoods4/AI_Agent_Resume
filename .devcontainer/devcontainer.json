@@ -1,0 +1,11 @@
+{
+  "name": "Resume Alpha · browser demo",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "features": {"ghcr.io/devcontainers/features/node:1": {"version": "22"}},
+  "forwardPorts": [5173],
+  "portsAttributes": {"5173": {"label": "Resume Alpha", "onAutoForward": "openBrowser"}},
+  "otherPortsAttributes": {"onAutoForward": "ignore"},
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postAttachCommand": "bash .devcontainer/start.sh",
+  "customizations": {"codespaces": {"openFiles": ["CODESPACES.md"]}}
+}

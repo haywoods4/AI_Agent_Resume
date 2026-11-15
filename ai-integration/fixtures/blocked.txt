@@ -1,0 +1,4 @@
+Synthetic Candidate B
+fixture-b@example.invalid
+Skills: Python.
+This is synthetic test data, not an actual applicant. Other required skills need human verification.
