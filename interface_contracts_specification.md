@@ -144,7 +144,7 @@ A cache miss or unavailable Redis returns the same response shape with `source: 
 
 ### Freshness and privacy rules
 
-1. Read the authoritative SQLite record and sensitivity flag before considering Redis. This is deliberately not unconditional Redis-first lookup.
+1. For fresh, non-replayed inquiries, read the authoritative SQLite record and sensitivity flag before considering Redis. This is deliberately not unconditional Redis-first lookup.
 2. Cache key: `cand:{tenant}:{hmac_digest}`. Cache only a nonsensitive public candidate projection, with a 900-second TTL. The 86400-second replay lifetime is separate from Redis freshness.
 3. Accept a cache value only when it exactly matches the current authoritative projection. Refresh mismatched data. Sensitive records bypass Redis; this does not itself remove the authorized SQLite projection from the response.
 4. Redis timeout, malformed data or connection failure falls back to SQLite. After five Redis failures, the circuit pauses Redis attempts for ten seconds. Each operation is bounded by a 0.3-second cache timeout.
@@ -154,7 +154,7 @@ A cache miss or unavailable Redis returns the same response shape with `source: 
 
 Errors use `error`, with optional `message` and validation `fields`; rejected input values are omitted. Expected HTTP categories are 400 validation, 401 unauthenticated, 403 unauthorized tenant/role/origin, 409 conflicting retry or immutable review, 413 oversized upload, 429 rate/capacity limit, and 503 unsaved database/dependency failure. A saved manual-review result can be HTTP 200; that is different from a failed database save.
 
-PR #4's integration suite exercises cache hit/miss, Redis failure, stale-cache comparison, sensitive-record bypass, tenant isolation and replay behavior. Documentation CI here validates JSON examples and required contract sections only, not the runtime. Future changes must keep both implementations and their tests aligned; a passing document check is not deployment or Alpha acceptance.
+PR #4's integration tests cover cache hit/miss, sensitive-record bypass, tenant isolation and replay. Redis-failure fallback and stale-cache comparison are implemented but still need dedicated verification. Documentation CI here validates JSON examples and required contract sections only, not the runtime. Future changes must keep both implementations and their tests aligned; a passing document check is not deployment or Alpha acceptance.
 
 ### Implementation references
 
