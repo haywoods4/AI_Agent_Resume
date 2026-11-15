@@ -21,7 +21,9 @@ class ScreeningPipeline:
         self.active_evaluations: set[str] = set()
         self.parsing = asyncio.Semaphore(2)
 
-    async def evaluate(self, request_id, job_id, email, phone, content, filename):
+    async def evaluate(
+        self, request_id, job_id, email, phone, content, filename, external_candidate_id=None
+    ):
         if request_id in self.inflight:
             raise ConflictError("REQUEST_IN_PROGRESS: retry the same request_id after completion")
         if len(self.inflight) >= 16:
@@ -42,7 +44,9 @@ class ScreeningPipeline:
             + b"\0"
             + (phone_hash or "").encode()
             + b"\0"
-            + Path(filename).suffix.lower().encode(),
+            + Path(filename).suffix.lower().encode()
+            + b"\0"
+            + (external_candidate_id or "").encode(),
             hashlib.sha256,
         ).hexdigest()
         replay = self.store.replay(tenant, "evaluation", request_id, fingerprint)
@@ -61,7 +65,9 @@ class ScreeningPipeline:
             # Sensitive-term classification is conservative cache policy, not our privacy guarantee.
             # The outbound whitelist removes ALL raw text, regardless of this flag.
             del pages
-            candidate_id = self.store.candidate(tenant, email_hash, phone_hash, last4, sensitive)
+            candidate_id = self.store.candidate(
+                tenant, email_hash, phone_hash, last4, sensitive, external_candidate_id
+            )
             evaluation = Evaluation(
                 evaluation_id=f"eval_{uuid.uuid4().hex}",
                 candidate_id=candidate_id,

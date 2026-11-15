@@ -1,10 +1,12 @@
 import secrets
 import sqlite3
 import time
+import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
@@ -40,7 +42,11 @@ class RequestGuard:
             return await JSONResponse(
                 {"error": "RATE_LIMITED"}, 429, headers={"Retry-After": "60"}
             )(scope, receive, send)
-        maximum = 600 * 1024 if scope["path"] == "/api/v1/evaluations" else 16384
+        maximum = (
+            600 * 1024
+            if scope["path"] in {"/api/v1/evaluations", "/api/v1/resumes/upload"}
+            else 16384
+        )
         body = bytearray()
         while True:
             message = await receive()
@@ -69,6 +75,31 @@ class RequestGuard:
             await send(message)
 
         await self.app(scope, buffered_receive, private_send)
+
+
+def upload_result(evaluation, timestamp):
+    observed = {s.skill_id for s in evaluation.facts.observed_skills}
+    verdict = {"allowed": "PASS", "blocked": "FAIL", "needs_review": "NEEDS_REVIEW"}
+    return {
+        **evaluation.model_dump(),
+        "timestamp": datetime.fromtimestamp(timestamp, timezone.utc).isoformat(),
+        "verdict": verdict[evaluation.policy_status],
+        "sanitized_payload": {"skills": sorted(observed)},
+        "policy_evaluations": [
+            {
+                "rule_id": f"required_skill:{skill}",
+                "passed": skill in observed,
+                "description": f"Documented mention of {skill}",
+            }
+            for skill in evaluation.facts.required_skills
+        ]
+        if evaluation.policy
+        else [],
+        "pii_scrubbed_summary": {
+            "method": "approved_skill_projection",
+            "raw_text_retained": False,
+        },
+    }
 
 
 def create_app(settings: Settings | None = None, agent=None, policy=None, cache=None):
@@ -165,6 +196,65 @@ def create_app(settings: Settings | None = None, agent=None, policy=None, cache=
             raise HTTPException(413, "Resume must not exceed 512 KiB")
         return await app.state.pipeline.evaluate(
             request_id, job_id, candidate_email, candidate_phone, content, resume.filename or ""
+        )
+
+    @app.post("/api/v1/resumes/upload")
+    async def upload_resume(
+        job_id: Annotated[str, Form(min_length=1, max_length=64)],
+        file: Annotated[UploadFile, File()],
+        candidate_id: Annotated[uuid.UUID | None, Form()] = None,
+        request_id: Annotated[
+            str | None, Form(min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_-]+$")
+        ] = None,
+        candidate_email: Annotated[str | None, Form(max_length=254)] = None,
+    ):
+        request_id = request_id or uuid.uuid4().hex
+        if candidate_id and candidate_email:
+            raise PrivacyError("Supply candidate_id or candidate_email, not both")
+        opaque_id = str(
+            candidate_id or uuid.uuid5(uuid.NAMESPACE_URL, f"{settings.tenant_id}/{request_id}")
+        )
+        try:
+            content = await file.read(512 * 1024 + 1)
+        finally:
+            await file.close()
+        if len(content) > 512 * 1024:
+            raise HTTPException(413, "Resume must not exceed 512 KiB")
+        result = await app.state.pipeline.evaluate(
+            request_id,
+            job_id,
+            candidate_email or f"{opaque_id}@opaque.invalid",
+            None,
+            content,
+            file.filename or "",
+            external_candidate_id=None if candidate_email else opaque_id,
+        )
+        return upload_result(
+            result, app.state.store.evaluation_timestamp(settings.tenant_id, result.evaluation_id)
+        )
+
+    @app.get("/api/v1/audit-logs")
+    async def audit_logs(
+        job_id: str | None = None,
+        verdict: Annotated[str | None, Query(pattern=r"^(PASS|FAIL|NEEDS_REVIEW)$")] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        limit: Annotated[int, Query(ge=1, le=100)] = 20,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ):
+        for date in (start_date, end_date):
+            if date is not None and date.tzinfo is None:
+                raise PrivacyError("Audit dates must include a timezone")
+        if start_date and end_date and start_date > end_date:
+            raise PrivacyError("start_date must not follow end_date")
+        return app.state.store.audit_logs(
+            settings.tenant_id,
+            job_id,
+            verdict,
+            start_date.timestamp() if start_date else None,
+            end_date.timestamp() if end_date else None,
+            limit,
+            offset,
         )
 
     @app.get("/api/v1/evaluations", response_model=list[Evaluation])

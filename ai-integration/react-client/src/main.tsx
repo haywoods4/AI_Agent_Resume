@@ -18,6 +18,7 @@ function App() {
     [busy, setBusy] = useState(false),
     [checked, setChecked] = useState(false),
     [mode, setMode] = useState("");
+  const [auditCount, setAuditCount] = useState<number | null>(null);
   const api = apiClient(token);
   async function run(action: () => Promise<void>) {
     setError("");
@@ -288,6 +289,20 @@ function App() {
           </div>
           <aside>
             <h2>Recent evaluations</h2>
+            <button
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  const audit = await api.audits();
+                  setAuditCount(audit.total_records);
+                })
+              }
+            >
+              Check saved audit records
+            </button>
+            {auditCount !== null && (
+              <p role="status">{auditCount} completed policy audit records</p>
+            )}
             <p className="hint">
               Opaque IDs only. Contact fields are not shown in model output.
             </p>

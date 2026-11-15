@@ -3,6 +3,7 @@ import sqlite3
 import time
 import uuid
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 from app.contracts import Evaluation, Review
@@ -63,7 +64,15 @@ class Store:
             self.db.execute("ROLLBACK")
             raise
 
-    def candidate(self, tenant, email_hash, phone_hash=None, phone_last4=None, sensitive=False):
+    def candidate(
+        self,
+        tenant,
+        email_hash,
+        phone_hash=None,
+        phone_last4=None,
+        sensitive=False,
+        external_candidate_id=None,
+    ):
         with self.transaction():
             row = self.db.execute(
                 "SELECT * FROM candidates WHERE tenant=? AND email_hash=?", (tenant, email_hash)
@@ -78,7 +87,7 @@ class Store:
                     (int(sensitive), phone_hash, phone_last4, row["id"]),
                 )
                 return row["id"]
-            candidate_id = f"cand_{uuid.uuid4().hex}"
+            candidate_id = external_candidate_id or f"cand_{uuid.uuid4().hex}"
             try:
                 self.db.execute(
                     "INSERT INTO candidates VALUES (?,?,?,?,?,?)",
@@ -213,6 +222,58 @@ class Store:
                 time.time(),
             ),
         )
+
+    def evaluation_timestamp(self, tenant, evaluation_id):
+        return self.db.execute(
+            "SELECT created FROM evaluations WHERE tenant=? AND id=?", (tenant, evaluation_id)
+        ).fetchone()[0]
+
+    def audit_logs(self, tenant, job_id, verdict, start, end, limit, offset):
+        clauses = ["tenant=?", "phase='completed'"]
+        params = [tenant]
+        if job_id is not None:
+            clauses.append("json_extract(approved_inputs, '$.job_id')=?")
+            params.append(job_id)
+        if verdict is not None:
+            clauses.append("json_extract(policy_result, '$.status')=?")
+            params.append(
+                {"PASS": "allowed", "FAIL": "blocked", "NEEDS_REVIEW": "needs_review"}[verdict]
+            )
+        if start is not None:
+            clauses.append("created>=?")
+            params.append(start)
+        if end is not None:
+            clauses.append("created<=?")
+            params.append(end)
+        where = " AND ".join(clauses)
+        total = self.db.execute(
+            f"SELECT count(*) FROM decision_audit WHERE {where}", params
+        ).fetchone()[0]
+        rows = self.db.execute(
+            f"SELECT * FROM decision_audit WHERE {where} ORDER BY id DESC LIMIT ? OFFSET ?",
+            [*params, limit, offset],
+        ).fetchall()
+        logs = []
+        for row in rows:
+            result = json.loads(row["policy_result"])
+            logs.append(
+                {
+                    "audit_id": f"aud-{row['id']}",
+                    "evaluation_id": row["evaluation_id"],
+                    "timestamp": datetime.fromtimestamp(row["created"], timezone.utc).isoformat(),
+                    "verdict": {
+                        "allowed": "PASS",
+                        "blocked": "FAIL",
+                        "needs_review": "NEEDS_REVIEW",
+                    }[result["status"]],
+                    "job_requirements": json.loads(row["job_requirements"]),
+                    "approved_inputs": json.loads(row["approved_inputs"]),
+                    "model_version": row["model_version"],
+                    "policy_result": result,
+                    "ai_metrics": json.loads(row["ai_metrics"]),
+                }
+            )
+        return {"total_records": total, "limit": limit, "offset": offset, "logs": logs}
 
     def close(self):
         self.db.close()

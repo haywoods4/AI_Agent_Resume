@@ -21,14 +21,14 @@ with httpx.Client(
     for expected in ("allowed", "blocked"):
         started = time.monotonic()
         response = client.post(
-            "/api/v1/evaluations",
+            "/api/v1/resumes/upload",
             data={
                 "request_id": f"alpha-{uuid.uuid4().hex}",
                 "job_id": "backend-engineer",
                 "candidate_email": f"{expected}@example.invalid",
             },
             files={
-                "resume": (
+                "file": (
                     f"{expected}.txt",
                     (root / f"fixtures/{expected}.txt").read_bytes(),
                     "text/plain",

@@ -62,7 +62,16 @@ export function apiClient(token: string) {
   return {
     jobs: () => call<Record<string, Job>>("/api/v1/jobs"),
     list: () => call<Evaluation[]>("/api/v1/evaluations"),
-    evaluate: (form: FormData) => call<Evaluation>("/api/v1/evaluations", form),
+    evaluate: (form: FormData) => {
+      form.set("file", form.get("resume")!);
+      form.delete("resume");
+      return call<Evaluation>("/api/v1/resumes/upload", form);
+    },
+    audits: () =>
+      call<{
+        total_records: number;
+        logs: { audit_id: string; verdict: string; model_version: string }[];
+      }>("/api/v1/audit-logs"),
     lookup: (tenant: string, email: string) =>
       call<{
         status: string;

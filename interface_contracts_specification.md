@@ -1,3 +1,17 @@
+# My Alpha integration contract decisions
+
+I integrated the shared routes below with the working pipeline. I retain the original interface proposal after this section for traceability; where it differs, this section documents my implemented Alpha behavior for team review.
+
+- I expose `POST /api/v1/resumes/upload` with multipart `file`, catalog `job_id`, optional UUID `candidate_id`, optional `request_id` for retries, and optional `candidate_email` as a compatibility extension. I accept either an ID or email, not both. I generate an opaque identity when neither is provided. I accept PDF/DOCX/TXT up to512KiB. I use catalog IDs such as `backend-engineer`, not arbitrary job UUIDs.
+- I authenticate all `/api/` requests against the configured reviewer token before buffering uploads. Any arbitrary bearer string is rejected. I serve the frontend through Vite's same-origin API proxy.
+- I return `evaluation_id`, `candidate_id`, `job_id`, UTC `timestamp`, `verdict` (`PASS`, `FAIL`, `NEEDS_REVIEW`), `sanitized_payload.skills`, structured `policy_evaluations`, and a truthful `pii_scrubbed_summary` describing projection rather than claiming specific PII detection. I also include the existing evaluation fields for the React review UI. A dependency failure returns `NEEDS_REVIEW`, never a fabricated FAIL or PASS.
+- I use `/api/v1/audit-logs` for tenant-scoped persisted completed decision snapshots, with job/verdict/date filters, limit1–100, offset, and total_records. I require timezone-aware date filters. I expose all four required audit fields plus model metrics. I retain initial AI-request audit snapshots internally, including interrupted requests.
+- I connect FastAPI to the actual Hermes Agent HTTP API at `/v1/chat/completions`; Hermes uses Groq's `llama-3.3-70b-versatile`. I do not assume that a model named `hermes-3-llama-3-8b` is offered by Groq. Hermes Agent and the provider model are separate components.
+- I send only approved skill IDs and page references to the model. I do not claim extraction of experience, degrees or certifications. I call OPA at `/v1/data/resume/screening/result`, validate its evidence result, and map it to the shared verdict envelope. I require human review for every outcome.
+- I consolidate the SQLite persistence in `app/store.py`. I do not run the old simulated root endpoint or maintain a second `db.sqlite3`. I preserve the backend contribution in Git history and use root `main.py` as the integrated entry point.
+
+## Original interface proposal (retained for review)
+
 # Agentic Hiring Platform: Interface Contracts & Specifications
 
 This document outlines the interface contracts, endpoints, data payloads, and schemas required for communication across each subsystem boundary in the agentic hiring platform.

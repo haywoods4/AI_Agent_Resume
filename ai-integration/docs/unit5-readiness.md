@@ -1,3 +1,5 @@
+> My Alpha assembly update: I have combined the three team branches on `justin/alpha-integration`. I verified successful CI on my original PR; my earlier write-access and teammate-code notes below are historical. I now use the root README and the effective contract section in `interface_contracts_specification.md` for the assembled demo. I still need current UMGC requirements, live Groq verification and team acceptance before claiming release readiness.
+
 # Unit 5: integration-lead readiness
 
 ## Source and ownership
