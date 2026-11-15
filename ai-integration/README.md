@@ -9,7 +9,6 @@ I use Python 3.12, [uv](https://docs.astral.sh/uv/), Node 22+, and internet for 
 ```sh
 uv sync --frozen
 uv run python scripts/init_env.py
-uv run python scripts/configure_login.py
 uv run python scripts/setup_opa.py
 uv run python scripts/demo.py
 ```
@@ -22,7 +21,7 @@ npm ci
 npm run dev
 ```
 
-I open the URL Vite prints and sign in with the username and password I chose in `configure_login.py`. I upload a small text-based PDF, DOCX or TXT with skills such as Python, FastAPI, SQL and Git. I review the evidence against the original document and save my reviewer outcome. I use a demo with a deterministic model fixture, **real OPA**, and SQLite at `data/demo.sqlite`; it does not call Groq.
+I open the URL Vite prints and sign in with my existing username/password or select Create an account on the page. I upload a small text-based PDF, DOCX or TXT with skills such as Python, FastAPI, SQL and Git. I review the evidence against the original document and save my reviewer outcome. I use a demo with a deterministic model fixture, **real OPA**, and SQLite at `data/demo.sqlite`; it does not call Groq.
 
 ## Use actual Hermes and Groq
 
@@ -52,7 +51,7 @@ I start React as above. `uv run python scripts/smoke_hermes.py` tests the live a
 
 ## Integration contracts
 
-I preserve `Authorization: Bearer <REVIEWER_TOKEN>` for scripts and API clients; the browser instead uses local username/password login and an HttpOnly session cookie. I currently configure one configured tenant and reviewer. I will replace that boundary with my team’s authentication service before shared deployment. I bind development servers locally and run one FastAPI worker for my SQLite prototype.
+I preserve `Authorization: Bearer <REVIEWER_TOKEN>` for scripts and API clients; the browser instead uses local username/password login and an HttpOnly session cookie. I configure one classroom tenant. New reviewer accounts require owner approval; this does not provide separate customer workspaces. I bind development servers locally and run one FastAPI worker for my SQLite prototype.
 
 | Route | Purpose |
 |---|---|
@@ -97,10 +96,14 @@ Upstream Hermes is MIT licensed; its downloaded source retains its LICENSE and a
 
 I track my assignment evidence and remaining dependencies in [Unit 5 readiness and ownership](docs/unit5-readiness.md).
 
-## My local reviewer sign-in
+## My in-app account setup
 
-I run `uv run python scripts/configure_login.py` once, choose a username and a password of at least 12 characters, and restart the API. I store only a salted scrypt password hash in the ignored, owner-readable `.env`; there is no default password or public registration. I never commit or share credentials. Changing the password requires this setup command and an API restart, which also revokes all sessions.
+I choose **Create an account** on the sign-in page, enter a username and confirm a password of at least 12 characters. On a completely fresh local installation with no existing configured account, the first account becomes the owner. Registration is serialized in SQLite so simultaneous requests cannot create two owners. Later accounts remain pending and cannot read résumés or audits or submit evaluations. The owner signs in, opens **Account requests**, loads requests and explicitly approves intended collaborators. Approved reviewers share this one classroom workspace; they do not gain account-administration access.
 
-I use a random server-side session with an HttpOnly, SameSite=Strict cookie. It expires after eight hours, on logout, on another login, or on API restart. I limit login attempts and reject cross-origin writes. The UI clears its feed on sign-out or an expired session. I restrict this cookie login to localhost HTTP (ports 5173/8000); the cookie deliberately lacks Secure for this local-only demo. I require HTTPS, Secure cookies, configurable trusted origins, durable sessions, proper identities/roles and distributed throttling before any shared deployment. This is one reviewer, not a multi-user authentication system. Existing Bearer-token integrations remain compatible.
+I preserve any existing username/password in `.env` unchanged as the owner account. Registration cannot overwrite or claim its username. New accounts persist salted scrypt hashes in the ignored `data/reviewer-accounts.sqlite`; no plaintext passwords or hashes are returned to the browser. Demo and live modes use the same account file when their databases share the data directory. `configure_login.py` remains an optional legacy setup tool, not a required signup step.
 
-My single-column activity feed has an upload composer, expandable evidence reviews, explicit demo/live labeling, and optional lookup/audit details. I do not turn policy `allowed`/`blocked` into accept/reject decisions. All evidence requires a human check.
+I use random server-side sessions with HttpOnly, SameSite=Strict cookies. Sessions expire after eight hours, logout, API restart or a new login to the same account; one account’s logout does not revoke others. I limit authentication attempts and reject cross-origin writes. Reviewer actions record their actual account ID. The UI clears sensitive state when a session expires.
+
+This remains **localhost HTTP, one classroom tenant and one API worker**, not a public production identity service. Cookie login accepts the documented local ports 5173/8000, deliberately without Secure for local HTTP. Shared hosting requires HTTPS/Secure cookies, deployment-specific trusted origins, durable sessions, distributed throttling, retention/access revocation/password recovery and an explicit owner-provisioning policy. I do not deploy this configuration publicly or claim separate user-owned workspaces. The API Bearer contract remains compatible.
+
+My simple activity feed keeps upload and human evidence review prominent, with technical and audit details collapsed. No policy result becomes a hiring decision.

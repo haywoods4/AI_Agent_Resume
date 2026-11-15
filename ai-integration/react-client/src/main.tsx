@@ -7,6 +7,10 @@ const statusLabel = (item: Evaluation) => item.review ? "Reviewed" : "Needs your
 function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [signup, setSignup] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("");
+  const [pending, setPending] = useState<{id: string; username: string}[]>([]);
   const [connected, setConnected] = useState(false);
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [job, setJob] = useState("");
@@ -35,21 +39,38 @@ function App() {
     }
     finally { running.current = false; setBusy(""); }
   }
-  async function connect() {
-    const response = await fetch("/api/v1/auth/login", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({username, password}),
+  async function authCall(path: string, body?: object) {
+    const response = await fetch(`/api/v1/auth/${path}`, {
+      method: body === undefined ? "GET" : "POST",
+      headers: {"Content-Type": "application/json"},
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
-    const auth = await response.json();
-    if (!response.ok) throw Error(auth.error ?? "Sign-in failed.");
-    setPassword("");
+    const result = await response.json();
+    if (!response.ok) throw new ApiError(result.error ?? "Account request failed.", response.status);
+    return result;
+  }
+  async function loadWorkspace(nextRole: string) {
+    setRole(nextRole); setConnected(true);
+    if (nextRole === "pending") return;
     const [catalog, items] = await Promise.all([api.jobs(), api.list()]);
     const healthResponse = await fetch("/health");
     if (!healthResponse.ok) throw Error("Service unavailable. Please try again.");
     const health = await healthResponse.json();
     setJobs(catalog); setJob(Object.keys(catalog)[0] ?? "");
-    setHistory(items); setMode(health.mode); setConnected(true);
+    setHistory(items); setMode(health.mode);
   }
+  async function connect() {
+    if (signup && password !== confirmPassword) throw Error("Passwords do not match.");
+    const response = await fetch(`/api/v1/auth/${signup ? "register" : "login"}`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username, password}),
+    });
+    const auth = await response.json();
+    if (!response.ok) throw Error(auth.error ?? "Sign-in failed.");
+    setPassword(""); setConfirmPassword("");
+    await loadWorkspace(auth.role);
+  }
+
   async function evaluate() {
     if (!file) throw Error("Choose a résumé first.");
     if (file.size > 512 * 1024) throw Error("Choose a file smaller than 512 KiB.");
@@ -73,7 +94,7 @@ function App() {
     clearSession();
   }
   function clearSession() {
-    setConnected(false); setPassword(""); setHistory([]); setSelected(null);
+    setConnected(false); setRole(""); setPending([]); setSignup(false); setConfirmPassword(""); setPassword(""); setHistory([]); setSelected(null);
     setEmail(""); setFile(null); setChecked(false); setError(""); setNotice("");
   }
   return <>
@@ -82,17 +103,19 @@ function App() {
     </header>
     <main id="main">
       {!connected ? <section className="card welcome">
-        <p className="eyebrow">REVIEWER WORKSPACE</p><h1>Let’s review a résumé.</h1>
+        <p className="eyebrow">REVIEWER WORKSPACE</p><h1>{signup ? "Create your account." : "Let’s review a résumé."}</h1>
         <p>Upload a document. Check the evidence. Save your review.</p>
-        <form onSubmit={e => { e.preventDefault(); void run("Signing in…", connect); }}>
+        <form onSubmit={e => { e.preventDefault(); void run(signup ? "Creating account…" : "Signing in…", connect); }}>
           <label htmlFor="username">Username</label>
-          <input id="username" autoComplete="username" required value={username} disabled={!!busy} onChange={e => setUsername(e.target.value)} />
+          <input id="username" autoComplete="username" minLength={signup ? 3 : undefined} maxLength={signup ? 64 : 128} pattern={signup ? "[A-Za-z0-9._-]+" : undefined} required value={username} disabled={!!busy} onChange={e => setUsername(e.target.value)} />
           <label htmlFor="password">Password</label>
-          <input id="password" type="password" autoComplete="current-password" required value={password} disabled={!!busy} onChange={e => setPassword(e.target.value)} />
-          <p className="hint">Your local reviewer account. No access key needed.</p>
-          <button id="connect" disabled={!!busy || !username.trim() || !password}>{busy || "Sign in"}</button>
+          <input id="password" type="password" autoComplete={signup ? "new-password" : "current-password"} minLength={signup ? 12 : undefined} maxLength={256} required value={password} disabled={!!busy} onChange={e => setPassword(e.target.value)} />
+          {signup && <><label htmlFor="confirm-password">Confirm password</label><input id="confirm-password" type="password" autoComplete="new-password" required value={confirmPassword} disabled={!!busy} onChange={e => setConfirmPassword(e.target.value)} /></>}
+          <p className="hint">{signup ? "Use at least 12 characters. New accounts need the workspace owner’s approval. On a fresh local setup, the first account becomes its owner." : "Your local reviewer account. No access key needed."}</p>
+          <button id="connect" disabled={!!busy || !username.trim() || !password}>{busy || (signup ? "Create account" : "Sign in")}</button>
         </form>
-      </section> : <>
+        <button className="quiet" disabled={!!busy} onClick={() => { setSignup(!signup); setPassword(""); setConfirmPassword(""); setError(""); }}>{signup ? "Already have an account? Sign in" : "Create an account"}</button>
+      </section> : role === "pending" ? <section className="card"><h1>Account created.</h1><p>Your account is waiting for the workspace owner to approve reviewer access. Résumés and audit records stay private until then.</p><button disabled={!!busy} onClick={() => void run("Checking access…", async () => { const user = await authCall("me"); await loadWorkspace(user.role); if (user.role === "pending") setNotice("Approval is still pending."); })}>Check approval</button></section> : <>
         <div className="page-heading"><div><h1>Your review feed</h1><p>Skill evidence, not hiring decisions.</p></div>
           <span className="badge">{mode === "demo" ? "Demo · simulated AI" : mode === "hermes" ? "Live Hermes / Groq" : "Model mode unknown"}</span>
         </div>
@@ -113,7 +136,7 @@ function App() {
       {busy && <p className="message" role="status" aria-live="polite">{busy}</p>}
       {error && <p className="message error" role="alert">{error}</p>}
       {notice && <p className="message" role="status">{notice}</p>}
-      {connected && <>
+      {connected && role !== "pending" && <>
         <div className="feed-heading"><h2>Recent activity</h2><button className="quiet" disabled={!!busy} onClick={() => void run("Refreshing…", async () => { setHistory(await api.list()); setChecked(false); })}>Refresh</button></div>
         {history.length === 0 && <section className="empty"><h3>No reviews yet</h3><p>Your uploaded résumés will appear here. Start with a synthetic example for this class prototype.</p></section>}
         <div className="feed">{history.map(item => {
@@ -138,6 +161,7 @@ function App() {
             </div>}
           </article>;
         })}</div>
+        {role === "owner" && <details className="utilities"><summary>Account requests</summary><p className="hint">Approving grants access to every résumé and audit in this classroom workspace. Approve only your intended collaborators.</p><button className="secondary" disabled={!!busy} onClick={() => void run("Loading requests…", async () => { const result = await authCall("accounts"); setPending(result.accounts); setNotice(result.accounts.length ? "Pending requests loaded." : "No pending account requests."); })}>Load requests</button>{pending.map(account => <div className="account-request" key={account.id}><span>{account.username}</span><button disabled={!!busy} onClick={() => void run("Approving reviewer…", async () => { await authCall(`accounts/${account.id}/approve`, {}); setPending(old => old.filter(x => x.id !== account.id)); setNotice(`Reviewer access approved for ${account.username}.`); })}>Approve reviewer access</button></div>)}</details>}
         <details className="utilities"><summary>Record lookup & audit tools</summary><fieldset disabled={!!busy}><label htmlFor="tenant">Tenant</label><input id="tenant" value={tenant} onChange={e => setTenant(e.target.value)} /><p className="hint">Lookup uses the candidate email in the upload form.</p><button className="secondary" disabled={!email} onClick={() => void run("Looking up record…", async () => { const found = await api.lookup(tenant, email); setNotice(found.status === "FOUND" ? `Existing record: ${found.candidate?.candidate_id}` : "No existing record found."); })}>Find existing record</button><button className="secondary" onClick={() => void run("Checking audits…", async () => { const audit = await api.audits(); setNotice(`${audit.total_records} completed policy audit records`); })}>Check saved audits</button></fieldset></details>
       </>}
       <footer>Class prototype · Human evidence review required · No automated hiring decisions</footer>

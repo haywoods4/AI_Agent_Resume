@@ -60,14 +60,14 @@ def test_wrong_login_throttle_and_cross_origin(settings):
         assert client.post("/api/v1/auth/login", json=payload).status_code == 429
 
 
-def test_login_requires_configuration(settings):
+def test_unknown_login_is_rejected(settings):
     with TestClient(
         create_app(settings, policy=FixturePolicy()),
         base_url="http://127.0.0.1:8000",
         headers={"Origin": "http://127.0.0.1:5173"},
     ) as client:
         response = client.post("/api/v1/auth/login", json={"username": "x", "password": "x"})
-        assert response.status_code == 503
+        assert response.status_code == 401
 
 
 def test_expiration_and_new_login_revoke_old_session(settings, monkeypatch):

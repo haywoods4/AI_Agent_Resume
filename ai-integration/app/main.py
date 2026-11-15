@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -43,8 +43,9 @@ class RequestGuard:
         headers = dict(scope.get("headers", []))
         expected = f"Bearer {self.settings.reviewer_token}".encode()
         bearer = secrets.compare_digest(headers.get(b"authorization", b""), expected)
-        login = scope["path"] == "/api/v1/auth/login"
-        if not login and not bearer and not self.sessions.valid(headers):
+        login = scope["path"] in {"/api/v1/auth/login", "/api/v1/auth/register"}
+        identity = self.sessions.identity(headers)
+        if not login and not bearer and identity is None:
             return await JSONResponse({"error": "UNAUTHORIZED"}, 401)(scope, receive, send)
         if not bearer:
             # Browser sessions are local-only; cross-origin writes fail before body parsing.
@@ -55,6 +56,20 @@ class RequestGuard:
                 return await JSONResponse({"error": "ORIGIN_NOT_ALLOWED"}, 403)(
                     scope, receive, send
                 )
+        if not login:
+            if scope["path"].startswith("/api/v1/auth/") and identity is None:
+                return await JSONResponse({"error": "Browser sign-in required."}, 401)(
+                    scope, receive, send
+                )
+            if (
+                not bearer
+                and identity["role"] == "pending"
+                and not scope["path"].startswith("/api/v1/auth/")
+            ):
+                return await JSONResponse({"error": "Reviewer access is pending approval."}, 403)(
+                    scope, receive, send
+                )
+            scope.setdefault("state", {})["identity"] = identity
         if time.monotonic() >= self.reset:
             self.count, self.reset = 0, time.monotonic() + 60
         self.count += 1
@@ -306,13 +321,16 @@ def create_app(settings: Settings | None = None, agent=None, policy=None, cache=
         return result
 
     @app.post("/api/v1/evaluations/{evaluation_id}/review", response_model=Evaluation)
-    async def review(evaluation_id: str, payload: Review):
+    async def review(evaluation_id: str, payload: Review, request: Request):
         if evaluation_id in app.state.pipeline.active_evaluations:
             raise ConflictError("Evaluation is still processing")
         if app.state.store.evaluation(settings.tenant_id, evaluation_id) is None:
             raise HTTPException(404, "Evaluation not found")
         result = app.state.store.review(
-            settings.tenant_id, settings.reviewer_id, evaluation_id, payload
+            settings.tenant_id,
+            request.state.identity["id"] if request.state.identity else settings.reviewer_id,
+            evaluation_id,
+            payload,
         )
         return result
 
