@@ -1,16 +1,35 @@
-# AI résumé evaluator — Alpha integration
+# Résumé Screening Alpha
 
-I assembled the backend foundation, interface specification and AI integration on `justin/alpha-integration` for review against `develop`. I keep `main` reserved for the team's Alpha release. I preserve the original contributions in the merge history.
+A classroom résumé-review application built with React, FastAPI, SQLite and Open Policy Agent (OPA). It checks documented skill evidence against a job's requirements, records policy outcomes and saves a review trail. Every result requires human review; the application does not rank applicants or make hiring decisions.
 
-## Launch in GitHub without installing anything locally
+## Try the keyless demo
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration)
 
-I click the button, confirm GitHub’s codespace creation, wait for setup, and open the private **Resume Alpha** preview on port **5173**. I create an account in the app. The default uses actual downloaded **MiniLM neural inference**, real OPA and SQLite, with **no API key**. It is not the simulated fixture and does not call Hermes/Groq. I retain the separately verified Hermes/Groq mode below. See [the launch guide](CODESPACES.md) for repository access, usage limits, model scope and troubleshooting.
+1. Sign in to GitHub, confirm access to this repository and create the codespace.
+2. Wait for setup, then open the private **Resume Alpha** preview on port **5173**.
+3. Create an account and choose **Try a synthetic example instead**. Compare the complete and missing-skills examples, expand their evidence and save a human review.
 
-## My quick demo setup
+The default cloud demo runs actual **MiniLM neural inference**, OPA and SQLite without an API key or a server on your computer. GitHub login, repository access and available Codespaces quota are still required. This is a private development preview, not an anonymous or always-on hosted website. See [the launch guide](CODESPACES.md) for setup, costs and troubleshooting.
 
-I use Python 3.12, uv, Node 22 or newer, and Git. From the repository root I run:
+**Branch status:** the integrated Alpha is on [`justin/alpha-integration`](https://github.com/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration), awaiting team approval in [PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4) against `develop`. The default `main` branch does not yet contain this integrated Alpha. Updated interface contracts are separately awaiting approval in [PR #5](https://github.com/haywoods4/AI_Agent_Resume/pull/5).
+
+## What is included
+
+- Account creation, sign-in and owner approval of additional reviewers in a shared classroom workspace.
+- Synthetic examples and résumé upload, approved-skill evidence extraction and explicit policy outcomes.
+- Saved human reviews, SQLite audit history and optional tenant-scoped Redis contact lookup.
+- Three clearly labeled execution modes: keyless local MiniLM, live Hermes Agent with Groq, and a simulated fixture mode for development.
+
+The model receives approved skill IDs and page references, not raw résumé text or contact details. These are narrow evidence checks, not general qualification extraction: experience, degrees, proficiency and context still need human assessment. Use synthetic data for the classroom demo. Accounts in the same workspace share records; this is not a production multi-tenant service.
+
+## Platform support
+
+The interface runs in a browser; Codespaces runs the services on Linux independently of the visitor’s operating system. Verified environments are Linux Codespaces and local macOS. Windows setup uses WSL and has not been separately verified. Historical Mac setup fixes address portability, not a Mac-only product requirement.
+
+## Run the simulated demo locally
+
+Prerequisites: Python 3.12, uv, Node 22 or newer and Git. From the repository root:
 
 ```sh
 cd ai-integration
@@ -20,7 +39,7 @@ uv run python scripts/setup_opa.py
 uv run python scripts/demo.py
 ```
 
-In a second terminal I run:
+In a second terminal:
 
 ```sh
 cd ai-integration/react-client
@@ -28,13 +47,11 @@ npm ci
 npm run dev
 ```
 
-I open the Vite URL, sign in with my existing username and password (or select Create an account), and upload `fixtures/allowed.txt` and `fixtures/blocked.txt` using the backend-engineer job. I check both policy outcomes, record a human review, and use “Check saved audits” under “Record lookup & audit tools” to verify persistence. This demo uses a **simulated model, real OPA and SQLite**, not live Groq.
+Open the Vite URL and create an account or sign in. The first account on a fresh installation owns the workspace; subsequent accounts require owner approval. This local command uses a **simulated model**, with real OPA and SQLite. It is not evidence of live AI inference.
 
-From `ai-integration` I can also run `uv run python scripts/alpha_smoke.py` to save the safe results in `data/alpha-evidence.json`.
+## Run live Hermes/Groq
 
-## My live Groq setup
-
-I create my key at https://console.groq.com/keys, then run these commands from `ai-integration`:
+Stop the demo first because the modes share ports. Create a key at [Groq](https://console.groq.com/keys), then run from `ai-integration`:
 
 ```sh
 uv run bash scripts/setup-hermes.sh
@@ -42,27 +59,21 @@ uv run python scripts/configure_groq.py
 uv run python scripts/run_live.py
 ```
 
-I enter my key at the hidden prompt; the command verifies account/model access and saves the key in the ignored `data/hermes/.env`. I stop the demo before starting live services because they use the same ports. I start React as above, then run `uv run python scripts/alpha_smoke.py` in another terminal to check the complete live workflow. I only claim live AI acceptance after that check succeeds in `hermes` mode. On Windows I use WSL for the Bash runtime scripts.
+The hidden prompt verifies model access and stores the key in ignored local configuration. Never commit it. Start React as above; run `uv run python scripts/alpha_smoke.py` in another terminal for the synthetic upload, review and audit workflow. Bash runtime scripts require WSL on Windows. See [the integration guide](ai-integration/README.md) for service configuration and limitations.
 
-## My integrated boundaries
+## Verification
 
-I run one FastAPI application and one SQLite store. Root `main.py` exposes that same application; `database.py` exposes its store instead of maintaining a separate SQLAlchemy database. I use the shared `/api/v1/resumes/upload` and `/api/v1/audit-logs` endpoints. I retain `/api/v1/evaluations` for review/history compatibility.
+A fresh GitHub Codespaces session was tested on November 15, 2026: setup, private HTTPS preview, account creation, complete/missing-skills examples, evidence inspection, saved review, logout and sign-in persistence. That browser run used keyless MiniLM, not Groq.
 
-I record the effective Alpha contract in [the interface specification](interface_contracts_specification.md). I limit extraction to approved skill evidence; years of experience, degrees and certificates remain unimplemented rather than fabricated. PASS/FAIL describe documented skill coverage, not a hiring decision, and all outcomes require human review.
-
-## My verification commands
+The separate [live Hermes/Groq verification](ai-integration/docs/live-verification-2026-11-15.md) records successful synthetic API evaluations, saved review and audit retrieval. CI at `d1ba66e4` passed lint, 52 backend tests, three OPA policy tests and the React production build. These checks do not establish production security, fairness or hiring validity.
 
 ```sh
 cd ai-integration
-uv run ruff check . ../main.py ../database.py ../test_main.py
-uv run pytest -q tests ../test_main.py
+uv run --extra keyless ruff check . ../main.py ../database.py ../test_main.py
+uv run --extra keyless pytest -q tests ../test_main.py
 tools/opa test policies/ -v
-cd react-client
-npm run build
+npm --prefix react-client ci
+npm --prefix react-client run build
 ```
 
-I set `TEST_REDIS_URL` only when a local test Redis service is running. GitHub Actions supplies Redis and OPA. I use the existing [integration setup guide](ai-integration/README.md) for individual service commands and privacy limitations.
-
-## My remaining release checks
-
-I verified the posted UMGC assignment and completed the synthetic live Groq smoke run, saved review, and audit retrieval ([evidence](ai-integration/docs/live-verification-2026-11-15.md)). I still need team review of the integration decisions and final release approval. I have not merged any team PR or submitted coursework. I keep the local classroom account login and single-worker SQLite limitations explicit. My integration branch includes the other team PRs, so I will coordinate their merge order rather than merging competing versions independently.
+Keyless tests require the pinned model installed by `scripts/setup_keyless.py`; CI installs it automatically. Set `TEST_REDIS_URL` only for a running test Redis service. Team review and release approval are still required.
