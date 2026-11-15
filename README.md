@@ -59,7 +59,7 @@ uv run python scripts/configure_groq.py
 uv run python scripts/run_live.py
 ```
 
-The hidden prompt verifies model access and stores the key in ignored local configuration. Never commit it. Start React as above; run `uv run python scripts/alpha_smoke.py` in another terminal for the synthetic upload, review and audit workflow. Bash runtime scripts require WSL on Windows. See [the integration guide](ai-integration/README.md) for service configuration and limitations.
+The hidden prompt verifies model access and stores the key in ignored local configuration. Never commit it. Start React as above; run `uv run python scripts/alpha_smoke.py` in another terminal to check synthetic allowed/blocked upload cases and save local verification results. Bash runtime scripts require WSL on Windows. See [the integration guide](ai-integration/README.md) for service configuration and limitations.
 
 ## Verification
 
