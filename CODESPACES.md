@@ -5,7 +5,7 @@
 1. I sign in to GitHub and confirm **Create codespace** for `justin/alpha-integration`. GitHub must grant me access to the repository. A professor without repository access needs the group owner to grant it; this button cannot bypass a private repository.
 2. I wait for the setup task to install Python/Node dependencies, verify OPA, and download the pinned public MiniLM model (~87 MB). The private **Resume Alpha** preview opens on port **5173**. If it does not, I open Ports → Resume Alpha → Open in Browser.
 3. I choose **Create an account** in the application. On a new codespace the first account owns that isolated classroom workspace. Later accounts need its approval.
-4. I upload `ai-integration/fixtures/allowed.txt`, then `blocked.txt`, with the backend-engineer role and a synthetic email. I expand evidence, check it against the fixture, save a human review and inspect audits.
+4. I open **Try a synthetic example instead**, then click the complete and missing-skills examples. No file download is needed. Alternatively, I upload the repository’s synthetic fixtures. I expand evidence, check it against the fixture, save a human review and inspect audits.
 5. I stop the codespace when finished. I download any required evidence before deleting it. Deletion removes its local accounts/data; stopping preserves workspace files but may still incur storage usage.
 
 No Groq key, model account, paid model API or local-machine server is needed for this path. It runs on GitHub’s computer, not my Mac. GitHub provisioning still requires login, repository access and confirmation; “one-click” is a launch shortcut, not a claim of anonymous or instantaneous hosting.

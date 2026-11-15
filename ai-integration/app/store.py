@@ -19,8 +19,18 @@ class Store:
             Path(path).parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.db = sqlite3.connect(path, timeout=1, check_same_thread=False, isolation_level=None)
         self.db.row_factory = sqlite3.Row
+        # Concurrent fresh workers can race while enabling WAL; SQLite may return
+        # BUSY immediately here even with a busy timeout. Retry only this setup step.
+        for attempt in range(5):
+            try:
+                self.db.execute("PRAGMA journal_mode=WAL")
+                break
+            except sqlite3.OperationalError as exc:
+                if "locked" not in str(exc).lower() or attempt == 4:
+                    self.db.close()
+                    raise
+                time.sleep(0.05 * (attempt + 1))
         self.db.executescript("""
-          PRAGMA journal_mode=WAL;
           PRAGMA foreign_keys=ON;
           CREATE TABLE IF NOT EXISTS candidates (
             id TEXT PRIMARY KEY, tenant TEXT NOT NULL, email_hash TEXT NOT NULL,

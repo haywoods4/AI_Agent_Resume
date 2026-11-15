@@ -71,12 +71,12 @@ function App() {
     await loadWorkspace(auth.role);
   }
 
-  async function evaluate() {
-    if (!file) throw Error("Choose a résumé first.");
-    if (file.size > 512 * 1024) throw Error("Choose a file smaller than 512 KiB.");
+  async function evaluate(inputFile = file, inputEmail = email, inputJob = job) {
+    if (!inputFile) throw Error("Choose a résumé first.");
+    if (inputFile.size > 512 * 1024) throw Error("Choose a file smaller than 512 KiB.");
     const form = new FormData();
-    form.set("request_id", crypto.randomUUID()); form.set("job_id", job);
-    form.set("candidate_email", email); form.set("resume", file);
+    form.set("request_id", crypto.randomUUID()); form.set("job_id", inputJob);
+    form.set("candidate_email", inputEmail); form.set("resume", inputFile);
     const item = await api.evaluate(form);
     setHistory(old => [item, ...old.filter(x => x.evaluation_id !== item.evaluation_id)]);
     setSelected(item.evaluation_id); setChecked(false);
@@ -121,7 +121,12 @@ function App() {
         </div>
         <section className="card composer" aria-labelledby="upload-title">
           <h2 id="upload-title">Add a résumé</h2>
-          <form onSubmit={e => { e.preventDefault(); void run("Checking evidence…", evaluate); }}>
+          <details><summary>Try a synthetic example instead</summary>
+            <p className="hint">No real applicant data. Both examples use the backend-engineer fixture role and run the currently selected AI mode.</p>
+            <p className="hint">Complete example: “Synthetic Candidate. Skills: Python, FastAPI, SQL, Git.” Missing-skills example: “Synthetic Candidate. Skills: Python.” These are the original example contents for your evidence review.</p>
+            <div className="actions">{[true, false].map(complete => <button key={String(complete)} className="secondary" disabled={!!busy} onClick={() => void run("Checking synthetic example…", () => evaluate(new File([complete ? "Synthetic Candidate. Skills: Python, FastAPI, SQL, Git." : "Synthetic Candidate. Skills: Python."], "synthetic.txt", {type: "text/plain"}), "synthetic@example.test", "backend-engineer"))}>{complete ? "Try complete example" : "Try missing-skills example"}</button>)}</div>
+          </details>
+          <form onSubmit={e => { e.preventDefault(); void run("Checking evidence…", () => evaluate()); }}>
             <fieldset disabled={!!busy}><div className="form-row">
               <div><label htmlFor="email">Candidate email</label><input id="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="candidate@example.com" /></div>
               <div><label htmlFor="job">Role</label><select id="job" value={job} onChange={e => setJob(e.target.value)}>{Object.entries(jobs).map(([id, j]) => <option key={id} value={id}>{j.title}</option>)}</select></div>
