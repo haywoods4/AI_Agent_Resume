@@ -12,7 +12,11 @@ A classroom résumé-review application built with React, FastAPI, SQLite and Op
 
 The default cloud demo runs actual **MiniLM neural inference**, OPA and SQLite without an API key or a server on your computer. GitHub login, Codespaces eligibility and available quota are still required. This is a private development preview, not an anonymous or always-on hosted website. See [the launch guide](CODESPACES.md) for setup, costs and troubleshooting.
 
-**Branch status:** the integrated Alpha is on [`justin/alpha-integration`](https://github.com/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration), awaiting team approval in [PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4) against `develop`. The default `main` branch does not yet contain this integrated Alpha. Updated interface contracts are separately awaiting approval in [PR #5](https://github.com/haywoods4/AI_Agent_Resume/pull/5).
+**Branch status:** the integrated Alpha is on [`justin/alpha-integration`](https://github.com/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration), awaiting team approval in [PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4) against `develop`. The default `main` branch does not yet contain this integrated Alpha. Updated interface contracts from [PR #5](https://github.com/haywoods4/AI_Agent_Resume/pull/5) have merged into `develop` and are included in this integration branch.
+
+## Share with the team or professor
+
+Share the **Open in GitHub Codespaces** button above, not a personal `app.github.dev` preview URL. Each person signs in with their own GitHub account and creates their own isolated workspace from the public repository. They do not need repository collaborator access, Justin’s credentials or a model API key. Their GitHub account must be eligible for Codespaces, and their own compute/storage allowance applies. A preview remains private to its Codespace owner unless they separately change its visibility.
 
 ## What is included
 

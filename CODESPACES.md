@@ -10,6 +10,10 @@
 
 No Groq key, model account, paid model API or local-machine server is needed for this path. It runs on GitHub’s computer, not your computer. GitHub provisioning still requires login, repository access and confirmation; “one-click” is a launch shortcut, not a claim of anonymous or instantaneous hosting.
 
+## Share the launch, not your private preview
+
+The launch link at the top is public and suitable for teammates or a professor. It creates a separate workspace under the person opening it; it does not share an existing owner’s accounts, records or private preview. GitHub sign-in and Codespaces eligibility are required. Each person uses their own included quota or billing arrangement and should stop their instance after the demonstration. No Groq key is required.
+
 ## What the AI actually does
 
 The application runs the pretrained `sentence-transformers/all-MiniLM-L6-v2` ONNX model on CPU. Its neural embeddings decide which approved skill IDs match observed skill IDs at a conservative 0.90 cosine threshold. Only those predictions are transformed into the structured assessment and sent to OPA. A separate exact-evidence validator rejects unsupported matches or omissions instead of substituting a fabricated passing answer. A model fault leaves manual review required.
