@@ -21,3 +21,16 @@
 On changes covered by the AI integration workflow, the runner builds the React client and stages that build on its loopback interface. FastAPI runs with local MiniLM, OPA and a fresh SQLite database. A headless browser registers a synthetic reviewer, submits both fixtures, checks the policy outcomes, saves a follow-up, reloads and verifies the corresponding audit references. A failure in this sequence fails the job.
 
 Open the run's **classroom-preview-evidence** artifact for the workspace, saved review, audit screenshots, revision and Python application coverage XML. The screenshots come from the application served on that runner. The preview is torn down at the end of the job. Hosting a persistent service, testing concurrent production traffic and verifying per-opening access controls remain separate work.
+
+### November 21, 2026 | Run 44879456611
+
+The [branch build](https://github.com/haywoods4/AI_Agent_Resume/actions/runs/44879456611) exercised [revision b17a169](https://github.com/haywoods4/AI_Agent_Resume/tree/b17a169eb1befcca008c7b70d2e5a64987e8f0ee). It passed 62 Python tests, all three OPA policy tests, Ruff, the React build and the browser preview check. The [coverage report](evidence/unit8/backend-coverage.xml) records 899 of 992 executable Python application statements (90.63%, about 91%). The [job log](https://github.com/haywoods4/AI_Agent_Resume/actions/runs/44879456611/job/136771314310) records the commands and outcomes.
+
+| Evidence from this run | What to look for |
+| --- | --- |
+| [Actions summary](evidence/unit8/actions-summary.jpg) | Successful build at b17a169, linked artifact and branch. |
+| [Staged review workspace](evidence/unit8/workspace.png) | Two synthetic records and the local MiniLM mode label on the built client. |
+| [Saved follow-up](evidence/unit8/saved-review.png) and [audit list](evidence/unit8/audit.png) | Record ending in 50b3b471 had one of four required skill mentions. The follow-up survived reload and the audit list shows the same reference. |
+| [Machine-readable result](evidence/unit8/preview.json) | The two fixture outcomes and exact tested revision. |
+
+For the separate macOS timing experiment and its workload, see [workspace verification](UNIT8_WORKSPACE_VERIFICATION.md). The uploaded report and images come from synthetic data in a temporary classroom preview.
