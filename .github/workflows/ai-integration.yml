@@ -33,8 +33,31 @@ jobs:
       - run: python -m json.tool ../.devcontainer/devcontainer.json >/dev/null
       - run: uv run --extra keyless ruff check . ../main.py ../database.py ../test_main.py
       - run: tools/opa test policies/ -v
-      - run: uv run --extra keyless pytest -q tests ../test_main.py
+      - name: Test the backend and record statement coverage
+        run: |
+          mkdir -p "$RUNNER_TEMP/portfolio-evidence"
+          uv run --extra keyless --with coverage==7.11.3 coverage run --source=app -m pytest -q tests ../test_main.py
+          uv run --extra keyless --with coverage==7.11.3 coverage report
+          uv run --extra keyless --with coverage==7.11.3 coverage xml -o "$RUNNER_TEMP/portfolio-evidence/backend-coverage.xml"
         env:
           TEST_REDIS_URL: redis://127.0.0.1:6379/0
       - run: npm ci && npm run build
         working-directory: ai-integration/react-client
+      - name: Stage the built application and verify the reviewer workflow
+        timeout-minutes: 6
+        run: |
+          react-client/node_modules/.bin/playwright-core install --with-deps chromium --only-shell
+          .venv/bin/python scripts/demo.py --keyless >"$RUNNER_TEMP/preview-api.log" 2>&1 &
+          api_pid=$!
+          (cd react-client && exec node_modules/.bin/vite preview --host 127.0.0.1 --port 5173 --strictPort) >"$RUNNER_TEMP/preview-ui.log" 2>&1 &
+          ui_pid=$!
+          trap 'kill "$ui_pid" "$api_pid" 2>/dev/null || true' EXIT
+          curl --silent --show-error --fail --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 http://127.0.0.1:5173/health
+          node react-client/scripts/verify-preview.mjs "$RUNNER_TEMP/portfolio-evidence"
+      - name: Save the classroom preview evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: classroom-preview-evidence
+          path: ${{ runner.temp }}/portfolio-evidence/
+          if-no-files-found: error
+          retention-days: 30

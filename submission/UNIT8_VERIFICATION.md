@@ -15,3 +15,9 @@
 3. Capture the green workflows for the exact submitted revision. If the team has an actual deployment job, record its run and environment separately. The Codespaces run is evidence of a working cloud development preview, not a production CD pipeline.
 4. Report coverage percentage, workload, and measured reliability only if the team has collected them. If a release cannot be verified, state the gap rather than using old numbers. For a benchmark, record sample size, hardware, mode, concurrency and errors.
 5. Include the repository link, installation/user/API links, final video link, and each team member's confirmed contributions. Associate collaborative work with the actual PRs and reviews.
+
+## Automated classroom preview
+
+On changes covered by the AI integration workflow, the runner builds the React client and stages that build on its loopback interface. FastAPI runs with local MiniLM, OPA and a fresh SQLite database. A headless browser registers a synthetic reviewer, submits both fixtures, checks the policy outcomes, saves a follow-up, reloads and verifies the corresponding audit references. A failure in this sequence fails the job.
+
+Open the run's **classroom-preview-evidence** artifact for the workspace, saved review, audit screenshots, revision and Python application coverage XML. The screenshots come from the application served on that runner. The preview is torn down at the end of the job. Hosting a persistent service, testing concurrent production traffic and verifying per-opening access controls remain separate work.
