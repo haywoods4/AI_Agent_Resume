@@ -4,7 +4,7 @@ A classroom résumé-review application built with React, FastAPI, SQLite and Op
 
 ## Try the keyless demo
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/develop)
 
 1. Sign in to GitHub and create the codespace from this public repository.
 2. Wait for setup, then open the private **Resume Alpha** preview on port **5173**.
@@ -12,7 +12,7 @@ A classroom résumé-review application built with React, FastAPI, SQLite and Op
 
 The default cloud demo runs actual **MiniLM neural inference**, OPA and SQLite without an API key or a server on your computer. GitHub login, Codespaces eligibility and available quota are still required. This is a private development preview, not an anonymous or always-on hosted website. See [the launch guide](CODESPACES.md) for setup, costs and troubleshooting.
 
-**Branch status:** the integrated Alpha is on [`justin/alpha-integration`](https://github.com/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration), awaiting team approval in [PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4) against `develop`. The default `main` branch does not yet contain this integrated Alpha. Updated interface contracts from [PR #5](https://github.com/haywoods4/AI_Agent_Resume/pull/5) have merged into `develop` and are included in this integration branch.
+**Branch status:** the integrated application is on [`develop`](https://github.com/haywoods4/AI_Agent_Resume/tree/develop), including the changes from [PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4) and the updated interface contract from [PR #5](https://github.com/haywoods4/AI_Agent_Resume/pull/5). Open `develop` for the integrated code; `main` does not contain the integrated application.
 
 ## Share with the team or professor
 
@@ -69,7 +69,7 @@ The hidden prompt verifies model access and stores the key in ignored local conf
 
 A fresh GitHub Codespaces session was tested on November 15, 2026: setup, private HTTPS preview, account creation, complete/missing-skills examples, evidence inspection, saved review, logout and sign-in persistence. That browser run used keyless MiniLM, not Groq.
 
-The separate [live Hermes/Groq verification](ai-integration/docs/live-verification-2026-11-15.md) records successful synthetic API evaluations, saved review and audit retrieval. CI at `d1ba66e4` passed lint, 52 backend tests, three OPA policy tests and the React production build. These checks do not establish production security, fairness or hiring validity.
+The separate [live Hermes/Groq verification](ai-integration/docs/live-verification-2026-11-15.md) records successful synthetic API evaluations, saved review and audit retrieval. At the integrated `develop` revision `8f281bc`, the [AI integration workflow](https://github.com/haywoods4/AI_Agent_Resume/actions/runs/43771731116) passed Ruff, 58 Python tests, three OPA policy tests and the React production build. The [interface contracts workflow](https://github.com/haywoods4/AI_Agent_Resume/actions/runs/43771731143) also passed on that revision. See the [Unit 8 integration handoff](submission/UNIT8_INTEGRATION.md) for the evidence and its limits. These checks do not establish production security, fairness or hiring validity.
 
 ```sh
 cd ai-integration
@@ -80,4 +80,4 @@ npm --prefix react-client ci
 npm --prefix react-client run build
 ```
 
-Keyless tests require the pinned model installed by `scripts/setup_keyless.py`; CI installs it automatically. Set `TEST_REDIS_URL` only for a running test Redis service. Team review and release approval are still required.
+Keyless tests require the pinned model installed by `scripts/setup_keyless.py`; CI installs it automatically. Set `TEST_REDIS_URL` only for a running test Redis service. Do not treat the classroom preview as a production deployment.
