@@ -1,8 +1,8 @@
 # Keyless GitHub Codespaces demo
 
-[Open this Alpha in GitHub Codespaces](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/justin/alpha-integration)
+[Open this Alpha in GitHub Codespaces](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/develop)
 
-1. Sign in to GitHub and confirm **Create codespace** for `justin/alpha-integration`. The repository is public; a GitHub account eligible to use Codespaces and available quota are required.
+1. Sign in to GitHub and confirm **Create codespace** for `develop`. The repository is public; a GitHub account eligible to use Codespaces and available quota are required.
 2. Wait for the setup task to install Python/Node dependencies, verify OPA, and download the pinned public MiniLM model (~87 MB). The private **Resume Alpha** preview opens on port **5173**. If it does not, open Ports → Resume Alpha → Open in Browser.
 3. Choose **Create an account** in the application. Signup opens the demo immediately, with no approval wait. The first account owns the workspace; later accounts are reviewers. All demo accounts share its synthetic records. Existing pending accounts can sign in after updating the demo.
 4. Choose **Try complete example** and **Try missing-skills example** from the workspace. No file download is needed. Alternatively, upload the repository’s synthetic fixtures. Expand evidence, check it against the fixture, save a human review and inspect audits.
@@ -47,6 +47,6 @@ The test suite covers all 64 observed-skill subsets across the six current catal
 
 ## Update an existing codespace
 
-Existing codespaces do not automatically pull new commits. Save work first. In its terminal, run `git status --short` and confirm the branch is `justin/alpha-integration`. With a clean checkout, run `git pull --ff-only origin justin/alpha-integration`. If Git reports local changes or a divergent branch, preserve that work rather than resetting it. Stop the codespace from GitHub, then reopen it to restart the app with the updated code. Sign in again; existing account passwords and saved data remain intact. No container rebuild is needed for this signup change.
+Existing codespaces do not automatically pull new commits. Save your work and check `git status --short` and `git branch --show-current`. If the checkout is clean and already on `develop`, run `git pull --ff-only origin develop`. If it is on the old integration branch or has local changes, preserve the existing workspace and use the launch link above to start a separate codespace on `develop`. Stop and reopen an updated codespace to restart the app; a new codespace has its own database.
 
 Immediate access is enabled only by the demo launcher (`DEMO_OPEN_SIGNUP=true`) in simulated/keyless mode. It does not persist approval into live mode, grant owner permissions or open the private preview to the public. Live Hermes workspaces still require owner approval of additional reviewers. Use synthetic data in the shared demo.
