@@ -2,6 +2,14 @@
 
 A classroom résumé-review application built with React, FastAPI, SQLite and Open Policy Agent (OPA). It checks documented skill evidence against a job's requirements, records policy outcomes and saves a review trail. Every result requires human review; the application does not rank applicants or make hiring decisions.
 
+## Unit 8 portfolio
+
+The [review candidate in PR #7](https://github.com/haywoods4/AI_Agent_Resume/pull/7) includes the integration handoff, reviewer interface changes and automated staging evidence. To try that candidate while its review is open, [launch the PR branch in Codespaces](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/justin/unit8-app-finish). The standard launch below follows the team’s integrated `develop` branch.
+
+- [Installation and private preview](CODESPACES.md) · [Reviewer walkthrough and performance measurements](submission/UNIT8_WORKSPACE_VERIFICATION.md)
+- [API and interface specification](interface_contracts_specification.md) · [Integration decisions and individual GitHub contributions](submission/UNIT8_INTEGRATION.md)
+- [Automated verification, coverage and screenshots](submission/UNIT8_VERIFICATION.md) · [Stakeholder demo segment](submission/UNIT8_DEMO.md)
+
 ## Try the keyless demo
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/haywoods4/AI_Agent_Resume/tree/develop)

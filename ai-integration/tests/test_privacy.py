@@ -66,3 +66,24 @@ def test_docx_parser_includes_tables_without_preserving_document():
 def test_bad_documents_rejected(content, name):
     with pytest.raises(PrivacyError):
         document_pages(content, name)
+
+
+@pytest.mark.parametrize("database_wording", ["SQL", "PostgreSQL", "SQLite"])
+def test_catalog_database_aliases_return_the_same_skill_projection(database_wording):
+    facts = PIIScrubbingMiddleware().scrub(
+        [f"Built Python and FastAPI services with {database_wording} and Git."],
+        "backend-engineer",
+    )
+    assert [skill.skill_id for skill in facts.observed_skills] == [
+        "python", "fastapi", "sql", "git"
+    ]
+    assert all(skill.pages == [1] for skill in facts.observed_skills)
+
+
+def test_uncatalogued_database_phrasing_needs_manual_follow_up():
+    facts = PIIScrubbingMiddleware().scrub(
+        ["Used Python and FastAPI, joined related tables, and tracked code in Git."],
+        "backend-engineer",
+    )
+    assert {skill.skill_id for skill in facts.observed_skills} == {"python", "fastapi", "git"}
+    assert "sql" in facts.required_skills

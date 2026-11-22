@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  constructor(message: string, public status: number) { super(message); }
+  constructor(message: string, public status: number, public code?: string) { super(message); }
 }
 export interface Evaluation {
   evaluation_id: string;
@@ -52,29 +52,29 @@ export function apiClient(token: string) {
       },
       body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     });
-    const result = await response.json();
+    const result = await response.json().catch(() => null);
+    if (response.ok && result === null)
+      throw new ApiError("The service returned an unreadable response.", response.status);
     if (!response.ok)
       throw new ApiError(
-        result.message ??
-          result.detail ??
-          result.error ??
+        result?.message ??
+          result?.detail ??
+          result?.error ??
           `Request failed (${response.status})`,
         response.status,
+        result?.error,
       );
     return result;
   }
   return {
     jobs: () => call<Record<string, Job>>("/api/v1/jobs"),
     list: () => call<Evaluation[]>("/api/v1/evaluations"),
-    evaluate: (form: FormData) => {
-      form.set("file", form.get("resume")!);
-      form.delete("resume");
-      return call<Evaluation>("/api/v1/resumes/upload", form);
-    },
+    evaluate: (form: FormData) => call<Evaluation>("/api/v1/resumes/upload", form),
     audits: () =>
       call<{
         total_records: number;
-        logs: { audit_id: string; verdict: string; model_version: string }[];
+        logs: { audit_id: string; evaluation_id: string; timestamp: string;
+          verdict: "PASS" | "FAIL" | "NEEDS_REVIEW" }[];
       }>("/api/v1/audit-logs"),
     lookup: (tenant: string, email: string) =>
       call<{

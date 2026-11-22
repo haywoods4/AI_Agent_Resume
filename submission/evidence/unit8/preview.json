@@ -1,0 +1,20 @@
+{
+  "revision": "b17a169eb1befcca008c7b70d2e5a64987e8f0ee",
+  "run": "44879456611",
+  "environment": "Ephemeral runner-local preview of the built React app",
+  "mode": "keyless",
+  "results": [
+    {
+      "evaluationId": "eval_e2f08f66b45c41c4a9c1faa60b7d5e10",
+      "skillCount": "4 of 4",
+      "policy": "allowed"
+    },
+    {
+      "evaluationId": "eval_d6a70d22fa284f41becfb5e850b3b471",
+      "skillCount": "1 of 4",
+      "policy": "blocked"
+    }
+  ],
+  "followUpSurvivedReload": true,
+  "bothAuditRecordsVisible": true
+}
