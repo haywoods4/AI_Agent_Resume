@@ -1,0 +1,17 @@
+# Résumé Screening Alpha: Verification and Release Evidence
+
+## Evidence available for the portfolio
+
+| Evidence | What it shows | What it does not show |
+| --- | --- | --- |
+| [AI integration CI](https://github.com/haywoods4/AI_Agent_Resume/actions/runs/43771731116), [Interface contracts CI](https://github.com/haywoods4/AI_Agent_Resume/actions/runs/43771731143) | 58 Python tests, three OPA checks, Ruff, React production build and interface examples passed at the same `develop` commit, `8f281bc1981343e20688bf824be049b663aea1c4`. | Production deployment, load capacity, or coverage percentage. |
+| [Merged Alpha PR #4](https://github.com/haywoods4/AI_Agent_Resume/pull/4) | Reports 58 tests and three OPA policy tests, Ruff, startup checks and React build at its cited PR head `bc90ecbd`. It also records a fresh Codespaces browser run using keyless MiniLM, including both examples and save/relogin persistence. | A full production deployment; live Groq behavior in the browser. The PR-head count is separate from the merge-commit CI result. |
+| [Live verification record](https://github.com/haywoods4/AI_Agent_Resume/blob/8f281bc1981343e20688bf824be049b663aea1c4/ai-integration/docs/live-verification-2026-11-15.md) | November 15 synthetic Hermes/Groq API checks with real OPA and SQLite. Complete case: 2,393 ms model, 2,557 ms total. Missing-evidence case: 841 ms model, 962 ms total. Both required human review. A follow-up review was saved and the evaluation appeared in the audit API. | A production latency estimate, average or percentile; load capacity, cost, fairness, or a live Groq browser test. Sample size: two evaluations. |
+
+## Capture for the final team video and repository
+
+1. Start from the chosen release revision. Record its SHA, environment, and mode label. Use synthetic fixtures only.
+2. Show the two synthetic examples, page evidence, a saved human follow-up review and audit history. Retain images or logs that identify the build and mode. Do not show customer data or credentials.
+3. Capture the green workflows for the exact submitted revision. If the team has an actual deployment job, record its run and environment separately. The Codespaces run is evidence of a working cloud development preview, not a production CD pipeline.
+4. Report coverage percentage, workload, and measured reliability only if the team has collected them. If a release cannot be verified, state the gap rather than using old numbers. For a benchmark, record sample size, hardware, mode, concurrency and errors.
+5. Include the repository link, installation/user/API links, final video link, and each team member's confirmed contributions. Associate collaborative work with the actual PRs and reviews.
